@@ -22,3 +22,7 @@ export { default as HelpCenterView } from './HelpCenterView';
 export { default as ArticleDetailView } from './ArticleDetailView';
 export { default as ProfileView } from './ProfileView';
 export { default as ProfileEditView } from './ProfileEditView';
+export { default as SettingsView } from './SettingsView';
+export { default as AuditLogsView } from './AuditLogsView';
+export { default as ReportsView } from './ReportsView';
+

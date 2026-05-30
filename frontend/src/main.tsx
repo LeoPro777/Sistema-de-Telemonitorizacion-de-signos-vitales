@@ -24,7 +24,10 @@ import {
   HelpCenterView,
   ArticleDetailView,
   ProfileView,
-  ProfileEditView
+  ProfileEditView,
+  SettingsView,
+  AuditLogsView,
+  ReportsView
 } from './views'
 import { useAuthStore } from './store/authStore'
 import './index.css'
@@ -56,26 +59,14 @@ const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) 
   return children
 }
 
-// Componentes Placeholder simples para que no fallen los links de la Sidebar
+// Rutas de administración y analítica
 
-const AuditsPlaceholder = () => (
-  <div className="bg-glass p-8 rounded-3xl border border-[#1E2640] text-center max-w-xl mx-auto mt-12">
-    <h3 className="text-xl font-bold text-slate-100">Auditoría Forense (Módulo 12)</h3>
-    <p className="text-sm text-slate-400 mt-2">Este módulo estará disponible en la siguiente fase de desarrollo.</p>
-  </div>
-)
-
-const ReportsPlaceholder = () => (
-  <div className="bg-glass p-8 rounded-3xl border border-[#1E2640] text-center max-w-xl mx-auto mt-12">
-    <h3 className="text-xl font-bold text-slate-100">Reportes Analíticos (Módulo 13)</h3>
-    <p className="text-sm text-slate-400 mt-2">Este módulo estará disponible en la siguiente fase de desarrollo.</p>
-  </div>
-)
 
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+
       <Toaster position="top-right" toastOptions={{
         style: {
           background: '#0F1420',
@@ -134,8 +125,9 @@ const App: React.FC = () => {
           <Route path="applicants" element={<ApplicantsView />} />
           <Route path="applicants/:email" element={<ApplicantDetailView />} />
 
-          <Route path="audits" element={<AuditsPlaceholder />} />
-          <Route path="reports" element={<ReportsPlaceholder />} />
+          <Route path="audits" element={<AuditLogsView />} />
+          <Route path="reports" element={<ReportsView />} />
+          <Route path="settings" element={<SettingsView />} />
           {/* Rutas reales del Módulo 9 */}
           <Route path="help" element={<HelpCenterView />} />
           <Route path="support/articles/:slug" element={<ArticleDetailView />} />

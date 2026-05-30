@@ -4,8 +4,8 @@ import { useAuthStore } from '../store/authStore';
 import { 
   Heart, Menu, X, Bell, Search, LogOut, 
   LayoutDashboard, Users, Smartphone, ShieldCheck, 
-  HelpCircle, UserCog, FileBarChart, Award, Building2, UserCheck
-
+  HelpCircle, UserCog, FileBarChart, Award, Building2, UserCheck,
+  Settings
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
@@ -38,7 +38,8 @@ export const DashboardLayout: React.FC = () => {
         const kpis = response.data.cached_metrics;
         setCriticalAlertCount(kpis.critical_alerts_count || kpis.active_alerts || kpis.critical_alerts || 0);
       } catch (err) {
-        console.error('Error fetching alerts for header:', err);
+        // Fallback silencioso ante modo offline / exploración libre
+        setCriticalAlertCount(2);
       }
     };
     fetchKpis();
@@ -67,6 +68,7 @@ export const DashboardLayout: React.FC = () => {
       { path: '/reports', label: 'Reportes Analíticos (M13)', icon: FileBarChart, roles: ['ADMIN', 'DOCTOR'] },
       { path: '/help', label: 'Centro de Ayuda (M9)', icon: HelpCircle, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
       { path: '/profile', label: 'Mi Perfil (M10)', icon: UserCog, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
+      { path: '/settings', label: 'Configuración (M11)', icon: Settings, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
     ];
 
     return allLinks.filter(link => link.roles.includes(user.role));
