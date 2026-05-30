@@ -4,9 +4,9 @@ applicants.py — Rutas para Onboarding de Aspirantes y Aprobación Administrati
 
 from datetime import datetime
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 
 from backend.services.database import db_service
 from backend.routes.auth import get_current_user
@@ -19,7 +19,49 @@ class ReviewRequest(BaseModel):
     status: ApprovalStatus
     rejection_reason: Optional[str] = None
 
+@router.get("")
+async def get_applicants(
+    current_user: UserResponse = Depends(get_current_user),
+    status_filter: Optional[ApprovalStatus] = Query(None, alias="status", description="Filtrar por estado (PENDING_APPROVAL, APPROVED, REJECTED)"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1)
+):
+    """
+    Obtiene la lista de solicitudes de aspirantes registradas en el sistema.
+    Ordenada cronológicamente descendente por fecha de envío.
+    Solo accesible para Administradores.
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido a administradores."
+        )
+
+    query = {}
+    if status_filter:
+        query["status"] = status_filter.value
+
+    skip = (page - 1) * limit
+    cursor = db_service.db.applicants.find(query).sort("submitted_at", -1).skip(skip).limit(limit)
+    applicants_list = []
+
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        if doc.get("audit_review") and doc["audit_review"].get("reviewed_by"):
+            doc["audit_review"]["reviewed_by"] = str(doc["audit_review"]["reviewed_by"])
+        applicants_list.append(doc)
+
+    total_count = await db_service.db.applicants.count_documents(query)
+
+    return {
+        "applicants": applicants_list,
+        "total": total_count,
+        "page": page,
+        "limit": limit
+    }
+
 @router.get("/status", response_model=ApplicantResponse)
+
 async def get_applicant_status(current_user: UserResponse = Depends(get_current_user)):
     """
     Retorna el estado de la solicitud de onboarding del usuario actual.

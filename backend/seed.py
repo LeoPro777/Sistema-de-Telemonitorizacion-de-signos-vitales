@@ -23,7 +23,8 @@ async def run_seed():
     collections_to_clear = [
         "users", "applicants", "dashboard_configs", "dashboard_kpi_cache", 
         "doctors", "clients", "patients", "devices", "vital_signs_history", 
-        "alerts", "auth_sessions"
+        "alerts", "auth_sessions", "help_articles", "support_tickets", 
+        "user_profiles", "user_preferences"
     ]
     for col in collections_to_clear:
         await db[col].delete_many({})
@@ -45,6 +46,9 @@ async def run_seed():
     doctor_martinez_user_id = ObjectId()
     doctor_ramirez_user_id = ObjectId()
     client_id = ObjectId()
+    clinica_sur_user_id = ObjectId()
+    hogar_familiar_user_id = ObjectId()
+    clinica_condes_user_id = ObjectId()
     patient_id = ObjectId()
     pending_id = ObjectId()
 
@@ -127,6 +131,39 @@ async def run_seed():
             "updated_at": now
         },
         {
+            "_id": clinica_sur_user_id,
+            "username": "clinica_sur",
+            "email": "contacto@clinicasur.com",
+            "password_hash": client_hash,
+            "role": UserRole.CLIENT,
+            "status": UserStatus.ACTIVE,
+            "two_factor": {"enabled": False, "secret": None}, 
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": hogar_familiar_user_id,
+            "username": "hogar_familiar",
+            "email": "contacto@donbosco.com",
+            "password_hash": client_hash,
+            "role": UserRole.CLIENT,
+            "status": UserStatus.ACTIVE,
+            "two_factor": {"enabled": False, "secret": None}, 
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": clinica_condes_user_id,
+            "username": "clinica_condes",
+            "email": "contacto@medicacondes.com",
+            "password_hash": client_hash,
+            "role": UserRole.CLIENT,
+            "status": UserStatus.SUSPENDED,
+            "two_factor": {"enabled": False, "secret": None}, 
+            "created_at": now,
+            "updated_at": now
+        },
+        {
             "_id": pending_id,
             "username": "dr_garcia",
             "email": "garcia@hospital.com",
@@ -166,8 +203,32 @@ async def run_seed():
         "audit_review": None,
         "submitted_at": now - timedelta(hours=2)
     }
-    await db.applicants.insert_one(pending_applicant)
-    print("Solicitud de onboarding pendiente creada.")
+    pending_applicant_client = {
+        "_id": ObjectId(),
+        "requested_role": UserRole.CLIENT,
+        "status": ApprovalStatus.PENDING_APPROVAL,
+        "personal_data": {
+            "first_name": "Ignacio",
+            "last_name": "Valenzuela",
+            "email": "valenzuela@ojos.com",
+            "phone": "+56 9 6543 2109",
+            "identification_number": "15.999.888-7"
+        },
+        "professional_metadata": {
+            "corporate_name": "Clínica de Ojos Especializada",
+            "tax_id": "76.543.210-9",
+            "client_type": ClientType.CLINICA
+        },
+        "verification_documents": [
+            {"url": "/docs/constitucion_sociedad.pdf", "doc_type": "CONSTITUCION_LEGAL"},
+            {"url": "/docs/patente.pdf", "doc_type": "PATENTE_MUNICIPAL"}
+        ],
+        "audit_review": None,
+        "submitted_at": now - timedelta(hours=5)
+    }
+
+    await db.applicants.insert_many([pending_applicant, pending_applicant_client])
+    print("Solicitudes de onboarding pendientes (Médico y Cliente) creadas.")
 
     # 5. Crear perfiles de Doctor y Cliente
     doctor_profile_id = ObjectId()
@@ -254,6 +315,10 @@ async def run_seed():
     await db.doctors.insert_many(doctors_profiles)
 
     client_profile_id = ObjectId()
+    client_sur_profile_id = ObjectId()
+    client_hogar_profile_id = ObjectId()
+    client_condes_profile_id = ObjectId()
+
     client_profile = {
         "_id": client_profile_id,
         "user_id": client_id,
@@ -276,8 +341,79 @@ async def run_seed():
         "created_at": now,
         "updated_at": now
     }
-    await db.clients.insert_one(client_profile)
+
+    clients_profiles = [
+        client_profile,
+        {
+            "_id": client_sur_profile_id,
+            "user_id": clinica_sur_user_id,
+            "is_active": True,
+            "status": "APPROVED",
+            "client_type": ClientType.CLINICA,
+            "corporate_name": "Clínica de Especialidades del Sur S.A.",
+            "tax_id": "77.666.555-4",
+            "contact_info": {
+                "phone": "+56 6 1234 5678",
+                "address": "Av. Independencia 1024, Concepción",
+                "emergency_email": "urgencias@clinicasur.com"
+            },
+            "ui_preferences": {"view_type": "CARDS"},
+            "summary_cache": {
+                "assigned_patients_count": 0,
+                "active_critical_alerts": 1,
+                "contract_health_percent": 90
+            },
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": client_hogar_profile_id,
+            "user_id": hogar_familiar_user_id,
+            "is_active": True,
+            "status": "APPROVED",
+            "client_type": ClientType.FAMILIAR,
+            "corporate_name": "Hogar Familiar Don Bosco",
+            "tax_id": "88.777.666-5",
+            "contact_info": {
+                "phone": "+56 2 2222 3333",
+                "address": "Calle San Alberto 430, Santiago",
+                "emergency_email": "soporte@donbosco.com"
+            },
+            "ui_preferences": {"view_type": "CARDS"},
+            "summary_cache": {
+                "assigned_patients_count": 0,
+                "active_critical_alerts": 0,
+                "contract_health_percent": 85
+            },
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": client_condes_profile_id,
+            "user_id": clinica_condes_user_id,
+            "is_active": False,
+            "status": "APPROVED",
+            "client_type": ClientType.CLINICA,
+            "corporate_name": "Centro Médico Las Condes",
+            "tax_id": "99.000.111-2",
+            "contact_info": {
+                "phone": "+56 2 2888 9999",
+                "address": "Av. Vitacura 5400, Vitacura",
+                "emergency_email": "urgencias@medicacondes.com"
+            },
+            "ui_preferences": {"view_type": "LIST"},
+            "summary_cache": {
+                "assigned_patients_count": 0,
+                "active_critical_alerts": 0,
+                "contract_health_percent": 100
+            },
+            "created_at": now,
+            "updated_at": now
+        }
+    ]
+    await db.clients.insert_many(clients_profiles)
     print("Perfiles de Doctor y Cliente creados.")
+
 
     # 6. Crear Dispositivos IoT (Módulo 5)
     device_id = ObjectId()
@@ -511,6 +647,130 @@ async def run_seed():
     ]
     await db.dashboard_kpi_cache.insert_many(kpi_caches)
     print("KPIs precacheados inicializados.")
+
+    # Seeding de artículos de ayuda
+    help_articles = [
+        {
+            "_id": ObjectId(),
+            "title": "Configuración del Hardware ESP32 AURA",
+            "slug": "configuracion-hardware-esp32-aura",
+            "format_type": "GUIDE",
+            "category": "Hardware",
+            "content": """# Configuración del Hardware ESP32 AURA
+
+Este artículo detalla la configuración inicial y el emparejamiento de los dispositivos IoT **ESP32 AURA** con el gateway de red local.
+
+## 1. Encendido inicial
+Presione el botón de encendido lateral durante 2 segundos. El LED parpadeará en **azul** indicando modo configuración AP.
+
+## 2. Conectividad
+* Conecte su teléfono móvil a la red SSID temporal: `AURA-CONFIG-XXXX`.
+* Abra su navegador e ingrese a `http://192.168.4.1`.
+* Introduzca las credenciales de su red local Wi-Fi.
+
+## 3. Vinculación
+Una vez configurado, el dispositivo enviará datos biométricos directamente. Para validarlo, contacte con su administrador clínico.
+""",
+            "media_urls": ["/docs/esp32_guide.png"],
+            "search_keywords": ["esp32", "hardware", "wifi", "conexion"],
+            "feedback_counters": {"useful_votes": 24, "not_useful_votes": 1},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "¿Cómo interpretar las Alertas Clínicas?",
+            "slug": "como-interpretar-alertas-clinicas",
+            "format_type": "FAQ",
+            "category": "Clínica",
+            "content": """# Interpretación de Alertas Clínicas
+
+El gateway biométrico AURA evalúa constantemente la telemetría enviada por el ESP32 para diagnosticar anomalías críticas.
+
+## Rangos Biométricos Estándar
+1. **Frecuencia Cardíaca (BPM)**: Rango óptimo entre `60` y `100` pulsaciones por minuto.
+2. **Saturación de Oxígeno (SpO2 %)**: Crítico si desciende de `92%`.
+3. **Temperatura (°C)**: Alarma si excede de `38.0°C` (Fiebre) o desciende de `35.0°C` (Hipotermia).
+
+Si experimenta una alerta roja, el personal clínico de turno será notificado instantáneamente. Conserve la calma y espere instrucciones.
+""",
+            "media_urls": [],
+            "search_keywords": ["alertas", "pulsaciones", "bpm", "spo2", "fiebre"],
+            "feedback_counters": {"useful_votes": 42, "not_useful_votes": 3},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Métodos de Pago y Ciclos del Fondeo Familiar",
+            "slug": "metodos-pago-fondeo-familiar",
+            "format_type": "FAQ",
+            "category": "Fondeo",
+            "content": """# Métodos de Pago del Fondeo Familiar
+
+Información relacionada con la facturación y suscripciones del sistema AURA para familiares individuales.
+
+## Ciclos de Cobro
+Los cobros se realizan de forma anticipada los **primeros 5 días hábiles** de cada mes.
+
+## Medios de Pago Aceptados
+* **Transferencia Bancaria Directa**
+* **Tarjeta de Crédito / Débito (Webpay)**
+
+Si presenta alertas contractuales en la consola de clientes, su servicio de monitoreo no se suspenderá inmediatamente, sino que otorgará una prórroga de 10 días antes de suspender temporalmente las credenciales del paciente.
+""",
+            "media_urls": [],
+            "search_keywords": ["pago", "factura", "dinero", "contrato", "fondeo"],
+            "feedback_counters": {"useful_votes": 12, "not_useful_votes": 0},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        }
+    ]
+    await db.help_articles.insert_many(help_articles)
+    print("Artículos de soporte e instructivos precargados.")
+
+    # Seeding de perfiles de usuario
+    user_profiles = [
+        {
+            "_id": ObjectId(),
+            "user_id": admin_id,
+            "google_avatar_url": "https://api.dicebear.com/7.x/adventurer/svg?seed=admin",
+            "personal_data": {
+                "first_name": "Administrador",
+                "last_name": "AURA",
+                "email": "admin@telemonitor.com",
+                "phone": "+56 9 1111 2222",
+                "address": "Av. Apoquindo 4400, Las Condes, Santiago",
+                "identification_number": "9.999.999-9"
+            },
+            "role_specific_data": {},
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "user_id": doctor_id,
+            "google_avatar_url": "https://api.dicebear.com/7.x/adventurer/svg?seed=dr_lopez",
+            "personal_data": {
+                "first_name": "Sofía",
+                "last_name": "López",
+                "email": "lopez@clinic.com",
+                "phone": "+56 9 3333 4444",
+                "address": "Providencia 890, Consultorio 3A, Santiago",
+                "identification_number": "14.234.567-8"
+            },
+            "role_specific_data": {
+                "medical_license": "LIC-88122-CL",
+                "specialty": "Cardiología Infantil",
+                "office_location": "Consultorio 3A, Piso 3"
+            },
+            "updated_at": now
+        }
+    ]
+    await db.user_profiles.insert_many(user_profiles)
+    print("Perfiles de usuario inmutables inicializados.")
 
     print("\n¡Seeding completado con éxito!")
     print("Cuentas disponibles para pruebas:")

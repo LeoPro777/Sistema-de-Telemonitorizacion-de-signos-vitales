@@ -16,7 +16,15 @@ import {
   DeviceDetailView,
   DeviceProvisionView,
   DoctorsView,
-  DoctorDetailView
+  DoctorDetailView,
+  ClientsView,
+  ClientDetailView,
+  ApplicantsView,
+  ApplicantDetailView,
+  HelpCenterView,
+  ArticleDetailView,
+  ProfileView,
+  ProfileEditView
 } from './views'
 import { useAuthStore } from './store/authStore'
 import './index.css'
@@ -64,19 +72,6 @@ const ReportsPlaceholder = () => (
   </div>
 )
 
-const HelpPlaceholder = () => (
-  <div className="bg-glass p-8 rounded-3xl border border-[#1E2640] text-center max-w-xl mx-auto mt-12">
-    <h3 className="text-xl font-bold text-slate-100">Centro de Ayuda (Módulo 9)</h3>
-    <p className="text-sm text-slate-400 mt-2">Este módulo estará disponible en la siguiente fase de desarrollo.</p>
-  </div>
-)
-
-const ProfilePlaceholder = () => (
-  <div className="bg-glass p-8 rounded-3xl border border-[#1E2640] text-center max-w-xl mx-auto mt-12">
-    <h3 className="text-xl font-bold text-slate-100">Mi Perfil y Configuración (Módulo 10)</h3>
-    <p className="text-sm text-slate-400 mt-2">Este módulo estará disponible en la siguiente fase de desarrollo.</p>
-  </div>
-)
 
 const App: React.FC = () => {
   return (
@@ -131,10 +126,23 @@ const App: React.FC = () => {
           <Route path="doctors" element={<DoctorsView />} />
           <Route path="doctors/:id" element={<DoctorDetailView />} />
 
+          {/* Rutas reales del Módulo 7 */}
+          <Route path="clients" element={<ClientsView />} />
+          <Route path="clients/:id" element={<ClientDetailView />} />
+
+          {/* Rutas reales del Módulo 8 */}
+          <Route path="applicants" element={<ApplicantsView />} />
+          <Route path="applicants/:email" element={<ApplicantDetailView />} />
+
           <Route path="audits" element={<AuditsPlaceholder />} />
           <Route path="reports" element={<ReportsPlaceholder />} />
-          <Route path="help" element={<HelpPlaceholder />} />
-          <Route path="profile" element={<ProfilePlaceholder />} />
+          {/* Rutas reales del Módulo 9 */}
+          <Route path="help" element={<HelpCenterView />} />
+          <Route path="support/articles/:slug" element={<ArticleDetailView />} />
+
+          {/* Rutas reales del Módulo 10 */}
+          <Route path="profile" element={<ProfileView />} />
+          <Route path="profile/edit" element={<ProfileEditView />} />
         </Route>
 
         {/* Fallback */}

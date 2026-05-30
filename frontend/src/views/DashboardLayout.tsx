@@ -4,7 +4,8 @@ import { useAuthStore } from '../store/authStore';
 import { 
   Heart, Menu, X, Bell, Search, LogOut, 
   LayoutDashboard, Users, Smartphone, ShieldCheck, 
-  HelpCircle, UserCog, FileBarChart, Award
+  HelpCircle, UserCog, FileBarChart, Award, Building2, UserCheck
+
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
@@ -60,6 +61,8 @@ export const DashboardLayout: React.FC = () => {
       { path: '/patients', label: 'Pacientes (M4)', icon: Users, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
       { path: '/devices', label: 'Dispositivos IoT (M5)', icon: Smartphone, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
       { path: '/doctors', label: 'Médicos (M6)', icon: Award, roles: ['ADMIN', 'DOCTOR'] },
+      { path: '/clients', label: 'Clientes (M7)', icon: Building2, roles: ['ADMIN'] },
+      { path: '/applicants', label: 'Aspirantes (M8)', icon: UserCheck, roles: ['ADMIN'] },
       { path: '/audits', label: 'Auditoría Forense (M12)', icon: ShieldCheck, roles: ['ADMIN'] },
       { path: '/reports', label: 'Reportes Analíticos (M13)', icon: FileBarChart, roles: ['ADMIN', 'DOCTOR'] },
       { path: '/help', label: 'Centro de Ayuda (M9)', icon: HelpCircle, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
@@ -225,15 +228,18 @@ export const DashboardLayout: React.FC = () => {
             <div className="h-8 w-[1px] bg-[#1E2640]" />
 
             {/* Perfil dropdown directo o link */}
-            <div className="flex items-center space-x-2.5">
+            <button 
+              onClick={() => navigate('/profile')}
+              className="flex items-center space-x-2.5 hover:opacity-85 transition-opacity text-left outline-none"
+            >
               <div className="h-8 w-8 bg-[#1E2640] rounded-lg border border-[#D4AF37]/20 text-[#D4AF37] font-bold flex items-center justify-center text-[10px] shadow-sm">
                 {user?.username.slice(0, 2).toUpperCase()}
               </div>
-              <div className="hidden lg:block text-left">
+              <div className="hidden lg:block">
                 <p className="text-xs font-bold text-slate-300">{user?.username}</p>
                 <p className="text-[9px] text-slate-500 font-semibold">{user?.email}</p>
               </div>
-            </div>
+            </button>
 
           </div>
         </header>
