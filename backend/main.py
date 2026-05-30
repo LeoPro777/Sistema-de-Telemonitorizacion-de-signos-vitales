@@ -13,6 +13,8 @@ from backend.routes.applicants import router as applicants_router
 from backend.routes.dashboard import router as dashboard_router
 from backend.routes.patients import router as patients_router
 from backend.routes.vitals import router as vitals_router
+from backend.routes.devices import router as devices_router
+from backend.routes.doctors import router as doctors_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,6 +44,8 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(applicants_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(patients_router, prefix="/api")
+app.include_router(devices_router, prefix="/api")
+app.include_router(doctors_router, prefix="/api")
 app.include_router(vitals_router) # Registrado sin prefijo para que coincida /ws/vitals y /api/vitals/simulate
 
 @app.get("/health")

@@ -11,7 +11,12 @@ import {
   DashboardHubView,
   PatientView,
   PatientsView,
-  PatientDetailView
+  PatientDetailView,
+  DevicesView,
+  DeviceDetailView,
+  DeviceProvisionView,
+  DoctorsView,
+  DoctorDetailView
 } from './views'
 import { useAuthStore } from './store/authStore'
 import './index.css'
@@ -44,13 +49,6 @@ const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) 
 }
 
 // Componentes Placeholder simples para que no fallen los links de la Sidebar
-
-const DevicesPlaceholder = () => (
-  <div className="bg-glass p-8 rounded-3xl border border-[#1E2640] text-center max-w-xl mx-auto mt-12">
-    <h3 className="text-xl font-bold text-slate-100">Gestión de Dispositivos (Módulo 5)</h3>
-    <p className="text-sm text-slate-400 mt-2">Este módulo estará disponible en la siguiente fase de desarrollo.</p>
-  </div>
-)
 
 const AuditsPlaceholder = () => (
   <div className="bg-glass p-8 rounded-3xl border border-[#1E2640] text-center max-w-xl mx-auto mt-12">
@@ -123,7 +121,16 @@ const App: React.FC = () => {
           {/* Rutas reales del Módulo 4 */}
           <Route path="patients" element={<PatientsView />} />
           <Route path="patients/:id" element={<PatientDetailView />} />
-          <Route path="devices" element={<DevicesPlaceholder />} />
+          
+          {/* Rutas reales del Módulo 5 */}
+          <Route path="devices" element={<DevicesView />} />
+          <Route path="devices/:id" element={<DeviceDetailView />} />
+          <Route path="devices/provision" element={<DeviceProvisionView />} />
+
+          {/* Rutas reales del Módulo 6 */}
+          <Route path="doctors" element={<DoctorsView />} />
+          <Route path="doctors/:id" element={<DoctorDetailView />} />
+
           <Route path="audits" element={<AuditsPlaceholder />} />
           <Route path="reports" element={<ReportsPlaceholder />} />
           <Route path="help" element={<HelpPlaceholder />} />

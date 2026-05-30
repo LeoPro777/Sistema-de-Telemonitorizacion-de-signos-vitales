@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { 
   Heart, Menu, X, Bell, Search, LogOut, 
   LayoutDashboard, Users, Smartphone, ShieldCheck, 
-  HelpCircle, UserCog, FileBarChart 
+  HelpCircle, UserCog, FileBarChart, Award
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
@@ -58,7 +58,8 @@ export const DashboardLayout: React.FC = () => {
     const allLinks = [
       { path: '/dashboard', label: 'Dashboard Hub', icon: LayoutDashboard, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
       { path: '/patients', label: 'Pacientes (M4)', icon: Users, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
-      { path: '/devices', label: 'Dispositivos IoT (M5)', icon: Smartphone, roles: ['ADMIN', 'CLIENT'] },
+      { path: '/devices', label: 'Dispositivos IoT (M5)', icon: Smartphone, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
+      { path: '/doctors', label: 'Médicos (M6)', icon: Award, roles: ['ADMIN', 'DOCTOR'] },
       { path: '/audits', label: 'Auditoría Forense (M12)', icon: ShieldCheck, roles: ['ADMIN'] },
       { path: '/reports', label: 'Reportes Analíticos (M13)', icon: FileBarChart, roles: ['ADMIN', 'DOCTOR'] },
       { path: '/help', label: 'Centro de Ayuda (M9)', icon: HelpCircle, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },

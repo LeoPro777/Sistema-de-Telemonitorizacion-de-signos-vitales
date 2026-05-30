@@ -41,6 +41,9 @@ async def run_seed():
     # 3. Crear Usuarios Semilla
     admin_id = ObjectId()
     doctor_id = ObjectId()
+    doctor_gonzalez_user_id = ObjectId()
+    doctor_martinez_user_id = ObjectId()
+    doctor_ramirez_user_id = ObjectId()
     client_id = ObjectId()
     patient_id = ObjectId()
     pending_id = ObjectId()
@@ -65,6 +68,39 @@ async def run_seed():
             "role": UserRole.DOCTOR,
             "status": UserStatus.ACTIVE,
             "two_factor": {"enabled": True, "secret": "JBSWY3DPEHPK3PXP"}, 
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": doctor_gonzalez_user_id,
+            "username": "dr_gonzalez",
+            "email": "gonzalez@clinic.com",
+            "password_hash": doctor_hash,
+            "role": UserRole.DOCTOR,
+            "status": UserStatus.ACTIVE,
+            "two_factor": {"enabled": False, "secret": None}, 
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": doctor_martinez_user_id,
+            "username": "dr_martinez",
+            "email": "martinez@clinic.com",
+            "password_hash": doctor_hash,
+            "role": UserRole.DOCTOR,
+            "status": UserStatus.ACTIVE,
+            "two_factor": {"enabled": False, "secret": None}, 
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": doctor_ramirez_user_id,
+            "username": "dr_ramirez",
+            "email": "ramirez@clinic.com",
+            "password_hash": doctor_hash,
+            "role": UserRole.DOCTOR,
+            "status": UserStatus.SUSPENDED,
+            "two_factor": {"enabled": False, "secret": None}, 
             "created_at": now,
             "updated_at": now
         },
@@ -135,6 +171,10 @@ async def run_seed():
 
     # 5. Crear perfiles de Doctor y Cliente
     doctor_profile_id = ObjectId()
+    doctor_gonzalez_id = ObjectId()
+    doctor_martinez_id = ObjectId()
+    doctor_ramirez_id = ObjectId()
+
     doctor_profile = {
         "_id": doctor_profile_id,
         "user_id": doctor_id,
@@ -153,7 +193,65 @@ async def run_seed():
         "created_at": now,
         "updated_at": now
     }
-    await db.doctors.insert_one(doctor_profile)
+
+    doctors_profiles = [
+        doctor_profile,
+        {
+            "_id": doctor_gonzalez_id,
+            "user_id": doctor_gonzalez_user_id,
+            "is_active": True,
+            "ui_preferences": {"view_type": "CARDS"},
+            "license_number": "LIC-11223-MED",
+            "internal_staff_id": "STAFF-1122",
+            "first_name": "Carlos",
+            "last_name": "González",
+            "specialty": "Urgenciólogo",
+            "contact": {
+                "phone": "+56 9 2233 4455",
+                "office_location": "Urgencias Box 4"
+            },
+            "active_patients_count": 0,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": doctor_martinez_id,
+            "user_id": doctor_martinez_user_id,
+            "is_active": True,
+            "ui_preferences": {"view_type": "LIST"},
+            "license_number": "LIC-33445-MED",
+            "internal_staff_id": "STAFF-3344",
+            "first_name": "Laura",
+            "last_name": "Martínez",
+            "specialty": "Medicina General",
+            "contact": {
+                "phone": "+56 9 3344 5566",
+                "office_location": "Edificio B, Oficina 102"
+            },
+            "active_patients_count": 0,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": doctor_ramirez_id,
+            "user_id": doctor_ramirez_user_id,
+            "is_active": False,
+            "ui_preferences": {"view_type": "CARDS"},
+            "license_number": "LIC-55667-MED",
+            "internal_staff_id": "STAFF-5566",
+            "first_name": "Pedro",
+            "last_name": "Ramírez",
+            "specialty": "Pediatría",
+            "contact": {
+                "phone": "+56 9 4455 6677",
+                "office_location": "Edificio C, Oficina 301"
+            },
+            "active_patients_count": 0,
+            "created_at": now,
+            "updated_at": now
+        }
+    ]
+    await db.doctors.insert_many(doctors_profiles)
 
     client_profile_id = ObjectId()
     client_profile = {
@@ -211,6 +309,36 @@ async def run_seed():
                 "battery_percent": 95,
                 "signal_strength_dbm": -52,
                 "last_ping_at": now - timedelta(minutes=15)
+            },
+            "has_hardware_alert": False
+        },
+        {
+            "_id": ObjectId(),
+            "serial_number": "AURA-ESP32-1002",
+            "mac_address": "24:0A:C4:8B:58:CC",
+            "model_version": "V1.0",
+            "is_active": True,
+            "approval_status": "APPROVED",
+            "operational_status": "MAINTENANCE",
+            "hardware_metrics": {
+                "battery_percent": 12,
+                "signal_strength_dbm": -88,
+                "last_ping_at": now - timedelta(hours=2)
+            },
+            "has_hardware_alert": True
+        },
+        {
+            "_id": ObjectId(),
+            "serial_number": "AURA-ESP32-8822",
+            "mac_address": "40:EE:B4:07:0F:88",
+            "model_version": "V2.0",
+            "is_active": True,
+            "approval_status": "PENDING_APPROVAL",
+            "operational_status": "MAINTENANCE",
+            "hardware_metrics": {
+                "battery_percent": 100,
+                "signal_strength_dbm": -40,
+                "last_ping_at": now - timedelta(days=1)
             },
             "has_hardware_alert": False
         }

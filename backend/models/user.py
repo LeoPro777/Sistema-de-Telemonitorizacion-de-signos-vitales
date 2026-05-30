@@ -19,6 +19,12 @@ class UserStatus(str, Enum):
     ACTIVE = "ACTIVE"
     SUSPENDED = "SUSPENDED"
 
+class TelemetryStatus(str, Enum):
+    NORMAL = "NORMAL"
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
+
+
 class TwoFactorSchema(BaseModel):
     enabled: bool = False
     secret: Optional[str] = None
