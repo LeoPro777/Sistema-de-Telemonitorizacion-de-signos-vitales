@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0B0F19] text-slate-100 antialiased selection:bg-[#D4AF37] selection:text-black;
+    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Premium Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0B0F19;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1E2640;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #D4AF37;
+  }
+}
+
+@layer utilities {
+  .bg-glass {
+    background: rgba(30, 38, 64, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+  }
+  
+  .bg-glass-active {
+    background: rgba(30, 38, 64, 0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+  }
+
+  .text-glow-gold {
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+  }
+
+  .text-glow-red {
+    text-shadow: 0 0 10px rgba(255, 23, 68, 0.6);
+  }
+
+  .border-glow-gold {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.25);
+  }
+}
+
+/* Animations */
+@keyframes heart-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px rgba(255, 23, 68, 0.4));
+  }
+  50% {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 12px rgba(255, 23, 68, 0.8));
+  }
+}
+
+.animate-pulse-heart {
+  animation: heart-pulse 1.2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+@keyframes signal-glow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.animate-signal {
+  animation: signal-glow 2s infinite ease-in-out;
+}
+
+@keyframes card-glow {
+  0%, 100% {
+    border-color: rgba(212, 175, 55, 0.2);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    border-color: rgba(212, 175, 55, 0.6);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.25);
+  }
+}
+
+.animate-card-active {
+  animation: card-glow 3s infinite ease-in-out;
+}

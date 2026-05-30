@@ -1,3 +1,12 @@
 // views/index.ts
 // Pantallas estructuradas — Módulo 1 al Módulo 13
-export {}
+export { default as LoginView } from './LoginView';
+export { default as ApplicantTypeView } from './ApplicantTypeView';
+export { default as RegistrationStepperView } from './RegistrationStepperView';
+export { default as WaitingApprovalView } from './WaitingApprovalView';
+export { default as DashboardLayout } from './DashboardLayout';
+export { default as DashboardHubView } from './DashboardHubView';
+export { default as PatientView } from './PatientView';
+export { default as PatientsView } from './PatientsView';
+export { default as PatientDetailView } from './PatientDetailView';
+
