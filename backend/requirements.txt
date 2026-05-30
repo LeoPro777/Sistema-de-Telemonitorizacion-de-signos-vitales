@@ -1,0 +1,42 @@
+# =============================================================================
+# Sistema de Telemonitorización de Signos Vitales
+# Backend — Dependencias Python
+# Entorno: Python 3.14 | FastAPI + Uvicorn + Motor + Celery + Redis
+# =============================================================================
+
+# ── API & ASGI Server ─────────────────────────────────────────────────────────
+fastapi>=0.115.12           # Framework web asíncrono principal
+uvicorn[standard]>=0.34.2   # Servidor ASGI con soporte WebSockets y hot-reload
+
+# ── Validación & Configuración ────────────────────────────────────────────────
+pydantic>=2.11.5            # Validación de esquemas y serialización (v2)
+pydantic-settings>=2.9.1    # Carga de variables de entorno (.env) con BaseSettings
+python-dotenv>=1.1.0        # Lectura de archivos .env
+
+# ── Base de Datos (MongoDB async) ─────────────────────────────────────────────
+motor>=3.7.0                # Driver async oficial de MongoDB (sobre PyMongo)
+pymongo>=4.12.0             # Driver base requerido por Motor
+
+# ── Broker / Caché (Redis + Celery) ──────────────────────────────────────────
+celery>=5.5.2               # Framework de tareas distribuidas en background
+redis>=5.3.0                # Cliente Python async/sync para Redis
+
+# ── Autenticación JWT ─────────────────────────────────────────────────────────
+python-jose[cryptography]>=3.3.0  # Creación y validación de tokens JWT
+passlib[bcrypt]>=1.7.4            # Hash de contraseñas con bcrypt
+
+# ── HTTP & Utilidades ─────────────────────────────────────────────────────────
+httpx>=0.28.1               # Cliente HTTP async (tests + llamadas internas)
+python-multipart>=0.0.20    # Soporte para form-data (subida de archivos)
+email-validator>=2.2.0      # Validación de campos EmailStr en Pydantic
+
+# ── WebSockets ────────────────────────────────────────────────────────────────
+websockets>=15.0.1          # Soporte WebSocket nativo (usado por Uvicorn)
+
+# ── Reportes & Exportación ────────────────────────────────────────────────────
+reportlab>=4.4.1            # Generación de PDFs clínicos
+openpyxl>=3.1.5             # Exportación de datos a Excel (.xlsx)
+
+# ── Herramientas de Desarrollo ────────────────────────────────────────────────
+pytest>=8.3.5               # Framework de testing
+pytest-asyncio>=0.26.0      # Soporte async en tests de FastAPI

@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../backend/.env
+    depends_on:
+      - mongo
+      - redis
+
+  celery_worker:
+    build:
+      context: ..
+      dockerfile: docker/backend.dockerfile
+    command: celery -A backend.workers worker --loglevel=info
+    restart: unless-stopped
+    env_file:
+      - ../backend/.env
+    depends_on:
+      - redis
+      - mongo
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
