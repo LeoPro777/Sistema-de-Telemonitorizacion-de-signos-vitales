@@ -182,3 +182,19 @@ main          ← código estable y validado
 > **Regla:** El Dockerfile de producción monolítica solo se construye desde
 > ramas `release/*` o `main`, garantizando que el contenedor empaqueta siempre
 > código validado.
+
+---
+
+## 6. Organización de Rutas de Autenticación y Administración
+
+Para garantizar el cumplimiento de los flujos de red de autenticación y de administración sin contraseñas:
+
+### En `/backend/routes/auth.py`
+- **`/auth/google-login`**: Endpoint receptor del token de Google. Realiza la autenticación, validación asíncrona contra Google APIs, determinación de la máquina de estados del usuario (`incomplete` vs `approved` o `pending_approval`) y la emisión de la **Cookie de Sesión HTTPOnly cifrada** (`session_id`).
+- **`/auth/onboarding`**: Permite al usuario en estado `incomplete` completar el flujo de selección de rol y proporcionar datos requeridos de negocio, mutando su estado a `pending_approval` e insertando un registro en la colección `applicants`.
+- **`/auth/me`**: Retorna el perfil del usuario validando la cookie HTTPOnly enviada por el navegador.
+
+### En `/backend/routes/applicants.py`
+- **`GET /applicants`**: Busca usuarios/solicitudes en estado `pending_approval` para el Administrador.
+- **`POST /applicants/{email}/review`**: Endpoint transaccional para Aprobar (muta el estado de usuario a `approved` y crea sus colecciones e.g., `doctors` o `clients`) o Rechazar/Suspender (muta a `rejected` o `suspended`).
+

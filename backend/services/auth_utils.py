@@ -60,3 +60,19 @@ def decode_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
+
+def sign_session_id(session_id: str) -> str:
+    """
+    Firma el session_id usando JWT con una expiración de 7 días.
+    """
+    return create_access_token({"session_id": session_id}, expires_delta=timedelta(days=7))
+
+def unsign_session_id(signed_session: str) -> Optional[str]:
+    """
+    Decodifica el session_id firmado y valida su firma.
+    """
+    payload = decode_token(signed_session)
+    if payload:
+        return payload.get("session_id")
+    return None
+

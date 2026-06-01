@@ -122,15 +122,15 @@ async def review_applicant(email: str, req: ReviewRequest):
     )
 
     # 4. Actualizar el estado del usuario
-    user_status = UserStatus.ACTIVE if req.status == ApprovalStatus.APPROVED else UserStatus.PENDING
+    user_status = UserStatus.APPROVED if req.status == ApprovalStatus.APPROVED else UserStatus.PENDING_APPROVAL
     if req.status == ApprovalStatus.REJECTED:
-        user_status = UserStatus.SUSPENDED # Si es rechazado, se suspende
+        user_status = UserStatus.REJECTED
         
     await db_service.db.users.update_one(
         {"_id": user_doc["_id"]},
         {
             "$set": {
-                "status": user_status,
+                "status": user_status.value,
                 "updated_at": now
             }
         }

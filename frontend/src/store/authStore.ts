@@ -2,170 +2,136 @@ import { create } from 'zustand';
 import api from '../utils/api';
 
 export type UserRole = 'ADMIN' | 'DOCTOR' | 'PATIENT' | 'CLIENT';
-export type UserStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+export type UserStatus = 'incomplete' | 'pending_approval' | 'approved' | 'rejected' | 'suspended';
 
 export interface User {
   id: string;
-  username: string;
+  google_id: string;
   email: string;
-  role: UserRole;
+  first_name: string;
+  last_name: string;
+  avatar_url: string;
+  role: UserRole | null;
   status: UserStatus;
-  two_factor: {
-    enabled: boolean;
-  };
   created_at: string;
   updated_at: string;
 }
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   isLoggedIn: boolean;
   isLoading: boolean;
-  twoFactorRequired: boolean;
-  tempToken: string | null;
   
-  // Flujo de Registro
+  // Flujo de Onboarding
   selectedRole: UserRole | null;
+  setSelectedRole: (role: UserRole | null) => void;
   
   // Acciones
-  setSelectedRole: (role: UserRole | null) => void;
-  login: (usernameOrEmail: string, password: String) => Promise<any>;
-  verify2FA: (otpCode: string) => Promise<any>;
-  registerApplicant: (data: any) => Promise<any>;
-  logout: () => void;
+  googleLogin: (token: string) => Promise<any>;
+  onboarding: (role: UserRole, personalData: any, professionalMetadata: any) => Promise<any>;
+  logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: {
-    id: "60c72b2f9b1d8b2a3c8e4d21",
-    username: "admin_master",
-    email: "admin@aura.com",
-    role: "ADMIN",
-    status: "ACTIVE",
-    two_factor: { enabled: false },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  token: "bypass_token",
-  isLoggedIn: true,
+  user: null,
+  isLoggedIn: false,
   isLoading: false,
-  twoFactorRequired: false,
-  tempToken: null,
-  
   selectedRole: null,
   
   setSelectedRole: (role) => set({ selectedRole: role }),
   
-  login: async (usernameOrEmail, password) => {
-    set({ isLoading: true, twoFactorRequired: false, tempToken: null });
+  googleLogin: async (token) => {
+    set({ isLoading: true });
     try {
-      const response = await api.post('/auth/login', {
-        username_or_email: usernameOrEmail,
-        password: password,
-      });
+      const response = await api.post('/auth/google-login', { token });
+      const { user } = response.data;
       
-      const { access_token, refresh_token, two_factor_required, temp_token, user } = response.data;
-      
-      if (two_factor_required) {
-        set({
-          twoFactorRequired: true,
-          tempToken: temp_token,
-          user: user,
-          isLoading: false,
-        });
-        return { twoFactorRequired: true };
-      }
-      
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
+      // Guardar bandera en localStorage para recordar intención de sesión
+      localStorage.setItem('aura_logged_in', 'true');
       
       set({
         user: user,
-        token: access_token,
         isLoggedIn: true,
         isLoading: false,
       });
       return { success: true, user };
     } catch (error: any) {
-      set({ isLoading: false });
-      throw error.response?.data?.detail || 'Error al iniciar sesión';
+      set({ isLoading: false, isLoggedIn: false, user: null });
+      localStorage.removeItem('aura_logged_in');
+      const detail = error?.response?.data?.detail;
+      if (typeof detail === 'string') throw detail;
+      throw error?.message || 'Error al iniciar sesión con Google';
     }
   },
   
-  verify2FA: async (otpCode) => {
-    const { tempToken } = get();
-    if (!tempToken) throw 'Token temporal no válido';
-    
+  onboarding: async (role, personalData, professionalMetadata) => {
     set({ isLoading: true });
     try {
-      const response = await api.post('/auth/verify-2fa', {
-        temp_token: tempToken,
-        otp_code: otpCode,
+      const response = await api.post('/auth/onboarding', {
+        role,
+        personal_data: personalData,
+        professional_metadata: professionalMetadata,
       });
       
-      const { access_token, refresh_token, user } = response.data;
-      
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
-      
+      const updatedUser = response.data;
       set({
-        user: user,
-        token: access_token,
-        isLoggedIn: true,
-        twoFactorRequired: false,
-        tempToken: null,
+        user: updatedUser,
         isLoading: false,
       });
-      return { success: true, user };
+      return updatedUser;
     } catch (error: any) {
       set({ isLoading: false });
-      throw error.response?.data?.detail || 'Código de verificación incorrecto';
+      const detail = error?.response?.data?.detail;
+      if (typeof detail === 'string') throw detail;
+      throw error?.message || 'Error al completar el registro de onboarding';
     }
   },
   
-  registerApplicant: async (data) => {
+  logout: async () => {
     set({ isLoading: true });
     try {
-      const response = await api.post('/auth/register', data);
-      set({ isLoading: false });
-      return response.data;
-    } catch (error: any) {
-      set({ isLoading: false });
-      throw error.response?.data?.detail || 'Error en el registro';
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Error al solicitar logout al servidor:', error);
+    } finally {
+      localStorage.removeItem('aura_logged_in');
+      set({
+        user: null,
+        isLoggedIn: false,
+        isLoading: false,
+        selectedRole: null,
+      });
     }
-  },
-  
-  logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    set({
-      user: null,
-      token: null,
-      isLoggedIn: false,
-      twoFactorRequired: false,
-      tempToken: null,
-    });
   },
   
   checkAuth: async () => {
-    set({
-      user: {
-        id: "60c72b2f9b1d8b2a3c8e4d21",
-        username: "admin_master",
-        email: "admin@aura.com",
-        role: "ADMIN",
-        status: "ACTIVE",
-        two_factor: { enabled: false },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      token: "bypass_token",
-      isLoggedIn: true,
-      isLoading: false,
-    });
+    // Si no hay bandera local, evitamos llamada innecesaria al servidor
+    const auraLoggedIn = localStorage.getItem('aura_logged_in');
+    if (!auraLoggedIn) {
+      set({ user: null, isLoggedIn: false, isLoading: false });
+      return;
+    }
+    
+    set({ isLoading: true });
+    try {
+      const response = await api.get('/auth/me');
+      set({
+        user: response.data,
+        isLoggedIn: true,
+        isLoading: false,
+      });
+    } catch (error) {
+      localStorage.removeItem('aura_logged_in');
+      set({
+        user: null,
+        isLoggedIn: false,
+        isLoading: false,
+      });
+    }
   },
 }));
+
 export type { AuthState };
 export default useAuthStore;
+

@@ -57,23 +57,25 @@ Sistema clínico de monitoreo remoto de pacientes en tiempo real.
 
 ### Desarrollo nativo (recomendado)
 
-Levanta cada componente en su propia terminal. Consulta [`DEVELOPMENT_ROADMAP.md §1`](./DEVELOPMENT_ROADMAP.md) para los comandos exactos y el orden de arranque.
+Para mayor comodidad en Windows, se ha unificado el arranque del **Frontend y Backend** en un solo comando.
+Asegúrate primero de tener corriendo MongoDB y Redis.
 
 ```bash
-# T1 – MongoDB
+# 1. Asegúrate de tener iniciados los servicios base (Mongo y Redis)
 mongod --dbpath ./data/db
-
-# T2 – Redis
 redis-server
 
-# T3 – FastAPI (nuevo terminal, dentro de /backend con venv activo)
-uvicorn main:app --reload --port 8000
+# 2. Inicia Frontend y Backend simultáneamente con un solo clic o comando
+start-dev.bat
+```
 
-# T4 – Celery Worker (nuevo terminal, mismo venv)
+*(El script `start-dev.bat` abrirá automáticamente dos ventanas: una con el entorno virtual activado ejecutando `uvicorn` para el backend, y otra ejecutando `npm run dev` para el frontend).*
+
+Si necesitas correr los Workers de Celery para las tareas en background, abre una nueva terminal en `backend/` y ejecuta:
+```bash
+cd backend
+call venv\Scripts\activate
 celery -A workers.celery_app worker --loglevel=info
-
-# T5 – React / Vite (nuevo terminal, dentro de /frontend)
-npm run dev
 ```
 
 Servicios disponibles en desarrollo:

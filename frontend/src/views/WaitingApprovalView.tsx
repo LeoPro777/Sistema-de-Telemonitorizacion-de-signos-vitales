@@ -21,13 +21,13 @@ export const WaitingApprovalView: React.FC = () => {
 
   // Polling para chequear si ha sido aprobado
   useEffect(() => {
-    // Si no hay usuario logueado o no está PENDING, redirigir
+    // Si no hay usuario logueado o no está pending_approval, redirigir
     if (!user) {
       navigate('/login');
       return;
     }
     
-    if (user.status === 'ACTIVE') {
+    if (user.status === 'approved') {
       navigate('/dashboard');
       return;
     }
@@ -43,9 +43,9 @@ export const WaitingApprovalView: React.FC = () => {
     return () => clearInterval(pollingInterval);
   }, [user, checkAuth, navigate]);
 
-  // Si el usuario cambia a ACTIVE, redirigir automáticamente
+  // Si el usuario cambia a approved, redirigir automáticamente
   useEffect(() => {
-    if (user && user.status === 'ACTIVE') {
+    if (user && user.status === 'approved') {
       toast.success('¡Su cuenta ha sido aprobada por la administración!');
       navigate('/dashboard');
     }
@@ -121,7 +121,7 @@ export const WaitingApprovalView: React.FC = () => {
             Auditoría de Cuenta Pendiente{dots}
           </h2>
           <p className="text-sm text-slate-400 mt-4 leading-relaxed">
-            Estimado <strong>{user?.username}</strong>, su solicitud de ingreso con el rol de{' '}
+            Estimado <strong>{user?.first_name} {user?.last_name}</strong>, su solicitud de ingreso con el rol de{' '}
             <strong className="text-slate-200">{user?.role}</strong> está siendo auditada por el personal administrativo.
           </p>
           <p className="text-xs text-slate-500 mt-2.5 leading-relaxed">

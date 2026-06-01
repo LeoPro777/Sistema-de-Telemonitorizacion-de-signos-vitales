@@ -7,7 +7,7 @@ description: Cuando se pida algo relacionado a la base de datos
 
 ## 1. Enums de Control Global
 * `UserRole`: `[ADMIN, DOCTOR, PATIENT, CLIENT]`
-* `UserStatus`: `[PENDING, ACTIVE, SUSPENDED]`
+* `UserStatus`: `[incomplete, pending_approval, approved, rejected, suspended]`
 * `ViewType`: `[CARDS, LIST]`
 * `TelemetryStatus`: `[NORMAL, WARNING, CRITICAL]`
 * `OperationalStatus`: `[AVAILABLE, ASSIGNED, MAINTENANCE]`
@@ -21,7 +21,6 @@ description: Cuando se pida algo relacionado a la base de datos
 * `ReportType`: `[CLINICAL, MANAGEMENT]`
 
 ## 2. Estructuras y Sub-Esquemas Embebidos
-* `TwoFactorSchema`: `{ enabled: bool, secret: str | null }`
 * `DeviceInfoSchema`: `{ user_agent: str, ip_address: str }`
 * `WidgetConfigSchema`: `{ widget_id: str, position_order: int, refresh_interval_ms: int }`
 * `PatientThresholdsSchema`: 
@@ -35,19 +34,20 @@ description: Cuando se pida algo relacionado a la base de datos
 ## 3. Colecciones de MongoDB
 
 ### MÓDULO 1: AUTENTICACIÓN
-* **Colección:** `users` (Índice único en `username` y `email`)
+* **Colección:** `users` (Índice único en `google_id` y `email`)
   * `_id`: ObjectId
-  * `username`: String
+  * `google_id`: String (Único)
   * `email`: String (EmailStr)
-  * `password_hash`: String
-  * `role`: String (Enum UserRole)
+  * `first_name`: String
+  * `last_name`: String
+  * `avatar_url`: String
+  * `role`: String | Null (Enum UserRole - Nulo antes del onboarding)
   * `status`: String (Enum UserStatus)
-  * `two_factor`: Object (TwoFactorSchema)
   * `created_at` / `updated_at`: ISODate
 * **Colección:** `auth_sessions` (Índice TTL en `expires_at`)
   * `_id`: ObjectId
   * `user_id`: ObjectId (Ref: `users._id`)
-  * `refresh_token`: String
+  * `session_id`: String (Identificador unívoco con la Cookie Stateful cifrada)
   * `device_info`: Object (DeviceInfoSchema)
   * `expires_at`: ISODate
   * `created_at`: ISODate

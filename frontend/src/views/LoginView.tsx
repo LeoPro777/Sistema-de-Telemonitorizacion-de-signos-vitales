@@ -1,64 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { Eye, EyeOff, Lock, User as UserIcon, Heart, KeyRound } from 'lucide-react';
+import { Heart } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 
 export const LoginView: React.FC = () => {
   const navigate = useNavigate();
-  const { login, verify2FA, twoFactorRequired, isLoading } = useAuthStore();
-  
-  // Formulario de login
-  const [usernameOrEmail, setUsernameOrEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  
-  // Formulario de 2FA
-  const [otpCode, setOtpCode] = useState('');
-
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!usernameOrEmail || !password) {
-      toast.error('Por favor, complete todos los campos');
-      return;
-    }
-
-    try {
-      const res = await login(usernameOrEmail, password);
-      if (res.twoFactorRequired) {
-        toast.success('Verificación de dos factores requerida');
-      } else {
-        toast.success(`¡Bienvenido, ${res.user.username}!`);
-        redirectByRole(res.user);
-      }
-    } catch (err: any) {
-      toast.error(err);
-    }
-  };
-
-  const handle2FASubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpCode.length !== 6) {
-      toast.error('Ingrese el código de 6 dígitos');
-      return;
-    }
-
-    try {
-      const res = await verify2FA(otpCode);
-      toast.success(`¡Autenticación completada! Bienvenido.`);
-      redirectByRole(res.user);
-    } catch (err: any) {
-      toast.error(err);
-    }
-  };
+  const { googleLogin, isLoading } = useAuthStore();
 
   const redirectByRole = (user: any) => {
-    if (user.status === 'PENDING') {
+    if (user.status === 'incomplete') {
+      navigate('/register-select');
+    } else if (user.status === 'pending_approval') {
       navigate('/waiting-approval');
-    } else if (user.role === 'PATIENT') {
-      navigate('/patient-view');
-    } else {
-      navigate('/dashboard');
+    } else if (user.status === 'approved') {
+      if (user.role === 'PATIENT') {
+        navigate('/patient-view');
+      } else {
+        navigate('/dashboard');
+      }
     }
   };
 
@@ -119,7 +80,7 @@ export const LoginView: React.FC = () => {
         </div>
       </div>
 
-      {/* PANEL DERECHO: Formulario de Login / 2FA */}
+      {/* PANEL DERECHO: Formulario de Login */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16 relative bg-[#0B0F19]">
         
         {/* Efectos decorativos de fondo en móviles */}
@@ -127,143 +88,53 @@ export const LoginView: React.FC = () => {
         
         <div className="w-full max-w-md relative z-10">
           
-          {/* Contenedor con transición deslizante si hay 2FA */}
+          {/* Contenedor principal de vidrio */}
           <div className="bg-glass p-8 md:p-10 rounded-3xl border border-[#1E2640] shadow-2xl relative overflow-hidden transition-all duration-500">
             
-            {/* Animación deslizante horizontal */}
-            <div className={`transition-transform duration-500 ease-in-out flex w-[200%] ${twoFactorRequired ? '-translate-x-1/2' : 'translate-x-0'}`}>
+            <div className="mb-8">
+              <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight">Iniciar Sesión</h3>
+              <p className="text-sm text-slate-400 mt-2">Acceda a la consola de control de signos vitales.</p>
+            </div>
+            
+            <div className="space-y-6 mt-8">
+              <div className="w-full flex items-center justify-center pt-2">
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <GoogleLogin
+                    onSuccess={async (credentialResponse) => {
+                      try {
+                        const res = await googleLogin(credentialResponse.credential!);
+                        if (res.success) {
+                          toast.success(`¡Bienvenido, ${res.user.first_name || 'Usuario'}!`);
+                          redirectByRole(res.user);
+                        }
+                      } catch (err: any) {
+                        toast.error(typeof err === 'string' ? err : err?.message || 'Error desconocido');
+                      }
+                    }}
+                    onError={() => {
+                      toast.error('Fallo al iniciar sesión con Google');
+                    }}
+                    theme="filled_black"
+                    size="large"
+                    text="continue_with"
+                    shape="rectangular"
+                    width="320"
+                  />
+                )}
+              </div>
               
-              {/* FORMULARIO 1: INICIO DE SESIÓN */}
-              <div className="w-1/2 pr-4 transition-opacity duration-300">
-                <div className="mb-8">
-                  <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight">Iniciar Sesión</h3>
-                  <p className="text-sm text-slate-400 mt-2">Acceda a la consola de control de signos vitales.</p>
-                </div>
-                
-                <form onSubmit={handleLoginSubmit} className="space-y-6">
-                  {/* Usuario / Email */}
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Usuario o Correo</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                        <UserIcon className="h-4 w-4" />
-                      </div>
-                      <input
-                        type="text"
-                        value={usernameOrEmail}
-                        onChange={(e) => setUsernameOrEmail(e.target.value)}
-                        placeholder="ej: dr_lopez o lopez@clinic.com"
-                        className="w-full pl-10 pr-4 py-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] outline-none text-sm transition-all placeholder:text-slate-600"
-                        required
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Contraseña */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Contraseña</label>
-                      <a href="#" className="text-xs text-[#D4AF37] hover:underline">¿Olvidó su contraseña?</a>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                        <Lock className="h-4 w-4" />
-                      </div>
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full pl-10 pr-10 py-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] outline-none text-sm transition-all placeholder:text-slate-600"
-                        required
-                        disabled={isLoading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Botón de Enviar */}
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#AA820A] text-black font-bold rounded-xl hover:from-[#E5BE48] hover:to-[#BC931B] transition-all duration-300 shadow-lg shadow-[#D4AF37]/10 flex items-center justify-center space-x-2"
-                  >
-                    {isLoading ? (
-                      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <span>Ingresar al Sistema</span>
-                    )}
-                  </button>
-                </form>
-
-                {/* Enlace inferior de registro */}
-                <div className="mt-8 text-center border-t border-[#1E2640] pt-6 text-xs md:text-sm text-slate-400">
-                  ¿No tiene una cuenta?{' '}
-                  <Link to="/register-select" className="text-[#D4AF37] font-semibold hover:underline">
-                    Solicitar registro
-                  </Link>
-                </div>
+              <div className="flex items-center space-x-4 pt-6">
+                <div className="flex-1 border-t border-[#1E2640]"></div>
+                <span className="text-xs text-slate-500 uppercase font-semibold tracking-wider">Acceso Seguro</span>
+                <div className="flex-1 border-t border-[#1E2640]"></div>
               </div>
+            </div>
 
-              {/* FORMULARIO 2: VERIFICACIÓN 2FA */}
-              <div className="w-1/2 pl-4 transition-opacity duration-300">
-                <div className="mb-8">
-                  <div className="h-12 w-12 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center border border-[#D4AF37]/30 mb-4">
-                    <KeyRound className="h-6 w-6 text-[#D4AF37]" />
-                  </div>
-                  <h3 className="text-2xl font-extrabold tracking-tight">Verificación 2FA</h3>
-                  <p className="text-sm text-slate-400 mt-2">
-                    Ingrese el código OTP de 6 dígitos enviado a su aplicación móvil.
-                  </p>
-                </div>
-
-                <form onSubmit={handle2FASubmit} className="space-y-6">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Código de Seguridad</label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                      placeholder="ej: 123456"
-                      className="w-full py-4 text-center tracking-[0.5em] text-2xl font-mono bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] outline-none transition-all placeholder:text-slate-700 placeholder:tracking-normal"
-                      required
-                      disabled={isLoading}
-                    />
-                    <p className="text-[11px] text-[#D4AF37]/70 mt-2 text-center">
-                      * Demo: Ingrese "123456" para aprobar la autenticación.
-                    </p>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading || otpCode.length !== 6}
-                    className="w-full py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#AA820A] text-black font-bold rounded-xl hover:from-[#E5BE48] hover:to-[#BC931B] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                  >
-                    {isLoading ? (
-                      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <span>Verificar Código</span>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => useAuthStore.setState({ twoFactorRequired: false, tempToken: null })}
-                    className="w-full text-center text-xs text-slate-500 hover:text-slate-300 font-semibold transition-colors mt-4"
-                  >
-                    Volver al login
-                  </button>
-                </form>
-              </div>
-
+            {/* Enlace inferior de registro */}
+            <div className="mt-8 text-center border-t border-[#1E2640] pt-6 text-xs md:text-sm text-slate-400">
+              ¿No tiene una cuenta? Al hacer clic arriba, si eres nuevo se abrirá nuestro portal de onboarding.
             </div>
 
           </div>
@@ -273,4 +144,5 @@ export const LoginView: React.FC = () => {
     </div>
   );
 };
+
 export default LoginView;

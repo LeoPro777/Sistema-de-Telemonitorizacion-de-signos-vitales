@@ -52,8 +52,16 @@ const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) 
     return <Navigate to="/login" replace />
   }
 
-  if (user?.status === 'PENDING' && !window.location.pathname.includes('/waiting-approval')) {
+  if (user?.status === 'incomplete' && !window.location.pathname.includes('/register-select') && !window.location.pathname.includes('/register-form')) {
+    return <Navigate to="/register-select" replace />
+  }
+
+  if (user?.status === 'pending_approval' && !window.location.pathname.includes('/waiting-approval')) {
     return <Navigate to="/waiting-approval" replace />
+  }
+
+  if (user?.status === 'rejected' || user?.status === 'suspended') {
+    return <Navigate to="/login" replace />
   }
 
   return children
@@ -144,9 +152,13 @@ const App: React.FC = () => {
   )
 }
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
+      <App />
+    </GoogleOAuthProvider>
   </React.StrictMode>
 )
 

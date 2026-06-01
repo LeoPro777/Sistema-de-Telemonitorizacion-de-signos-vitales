@@ -6,11 +6,11 @@ import toast from 'react-hot-toast';
 
 export const RegistrationStepperView: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedRole, registerApplicant } = useAuthStore();
+  const { selectedRole, user, onboarding } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirigir si no hay rol seleccionado
+  // Redirigir si no hay rol seleccionado o si el usuario no tiene estado incompleto
   useEffect(() => {
     if (!selectedRole) {
       toast.error('Por favor, seleccione el tipo de aspirante primero');
@@ -20,11 +20,9 @@ export const RegistrationStepperView: React.FC = () => {
 
   // --- ESTADO DEL FORMULARIO ---
   // Paso 1: Datos Comunes & Cuenta
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState(user?.first_name || '');
+  const [lastName, setLastName] = useState(user?.last_name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
   const [nationalId, setNationalId] = useState('');
 
@@ -47,12 +45,8 @@ export const RegistrationStepperView: React.FC = () => {
 
   const handleNextStep = () => {
     if (currentStep === 1) {
-      if (!username || !password || !firstName || !lastName || !email || !phone || !nationalId) {
+      if (!firstName || !lastName || !email || !phone || !nationalId) {
         toast.error('Complete todos los campos del Paso 1');
-        return;
-      }
-      if (password.length < 6) {
-        toast.error('La contraseña debe tener al menos 6 caracteres');
         return;
       }
     } else if (currentStep === 2) {
@@ -144,25 +138,19 @@ export const RegistrationStepperView: React.FC = () => {
       };
     }
 
-    const payload = {
-      username: username,
+    const personalData = {
+      first_name: firstName,
+      last_name: lastName,
       email: email,
-      password: password,
-      requested_role: selectedRole,
-      personal_data: {
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        phone: phone,
-        identification_number: nationalId,
-      },
-      professional_metadata: professionalMetadata,
+      phone: phone,
+      identification_number: nationalId,
     };
 
     try {
-      await registerApplicant(payload);
+      if (!selectedRole) throw 'No se ha seleccionado rol de aspirante.';
+      await onboarding(selectedRole, personalData, professionalMetadata);
       toast.success('Solicitud enviada exitosamente. Su cuenta ha quedado pendiente de aprobación.');
-      navigate('/login'); // Redirigir a login para que pueda entrar y ver su estado de espera!
+      navigate('/waiting-approval');
     } catch (err: any) {
       toast.error(err);
     } finally {
@@ -283,40 +271,13 @@ export const RegistrationStepperView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Email Único</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Email (Vinculado a Google)</label>
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="andres@hospital.com"
-                  className="w-full px-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-sm"
-                  required
+                  readOnly
+                  className="w-full px-4 py-2.5 bg-[#101626] border border-[#1E2640] rounded-xl outline-none text-sm text-slate-400 cursor-not-allowed"
                 />
-              </div>
-
-              <div className="border-t border-[#1E2640] pt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Nombre de Usuario</label>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="ej: dr_andres"
-                    className="w-full px-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Contraseña</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Contraseña de acceso"
-                    className="w-full px-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-sm"
-                    required
-                  />
-                </div>
               </div>
             </div>
           )}

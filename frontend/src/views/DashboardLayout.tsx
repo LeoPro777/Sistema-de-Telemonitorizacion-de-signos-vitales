@@ -13,8 +13,23 @@ import api from '../utils/api';
 export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const [criticalAlertCount, setCriticalAlertCount] = useState(0);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  // Auto-colapsar menú en pantallas pequeñas
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Redirigir a login si no está logueado o si está PENDING
   useEffect(() => {
@@ -53,7 +68,7 @@ export const DashboardLayout: React.FC = () => {
     navigate('/login');
   };
 
-  // Filtrar accesos del menú lateral por roles
+  // Filtrar accesos del menú lateral por roles (removidos Mi Perfil, Configuración y Centro de Ayuda del Sidebar)
   const getSidebarLinks = () => {
     if (!user) return [];
 
@@ -66,9 +81,6 @@ export const DashboardLayout: React.FC = () => {
       { path: '/applicants', label: 'Aspirantes (M8)', icon: UserCheck, roles: ['ADMIN'] },
       { path: '/audits', label: 'Auditoría Forense (M12)', icon: ShieldCheck, roles: ['ADMIN'] },
       { path: '/reports', label: 'Reportes Analíticos (M13)', icon: FileBarChart, roles: ['ADMIN', 'DOCTOR'] },
-      { path: '/help', label: 'Centro de Ayuda (M9)', icon: HelpCircle, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
-      { path: '/profile', label: 'Mi Perfil (M10)', icon: UserCog, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
-      { path: '/settings', label: 'Configuración (M11)', icon: Settings, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
     ];
 
     return allLinks.filter(link => link.roles.includes(user.role));
@@ -79,11 +91,22 @@ export const DashboardLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex overflow-hidden">
       
+      {/* Backdrop de móvil */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden transition-all duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      
       {/* SIDEBAR LATERAL IZQUIERDA */}
       <aside 
-        className={`bg-[#0F1420] border-r border-[#1E2640] transition-all duration-300 flex flex-col justify-between flex-shrink-0 relative z-30 ${
-          isSidebarOpen ? 'w-64' : 'w-20'
-        }`}
+        className={`bg-[#0F1420] border-r border-[#1E2640] transition-all duration-300 flex flex-col justify-between flex-shrink-0 z-40
+          fixed md:relative top-0 bottom-0 left-0 h-full
+          ${isSidebarOpen 
+            ? 'translate-x-0 w-64 shadow-2xl md:shadow-none' 
+            : '-translate-x-full md:translate-x-0 md:w-20'
+          }`}
       >
         <div>
           {/* Logo superior */}
@@ -103,9 +126,9 @@ export const DashboardLayout: React.FC = () => {
             {isSidebarOpen && (
               <button 
                 onClick={() => setIsSidebarOpen(false)}
-                className="text-slate-400 hover:text-slate-200 hidden md:block"
+                className="text-slate-400 hover:text-slate-200"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             )}
           </div>
@@ -119,6 +142,11 @@ export const DashboardLayout: React.FC = () => {
                   key={idx}
                   to={link.path}
                   end={link.path === '/dashboard'}
+                  onClick={() => {
+                    if (window.innerWidth < 768) {
+                      setIsSidebarOpen(false);
+                    }
+                  }}
                   className={({ isActive }) => `
                     flex items-center space-x-3.5 px-4 py-3 rounded-xl transition-all group ${
                       isActive 
@@ -229,7 +257,7 @@ export const DashboardLayout: React.FC = () => {
 
             <div className="h-8 w-[1px] bg-[#1E2640]" />
 
-            {/* Perfil dropdown directo o link */}
+            {/* Perfil directo link */}
             <button 
               onClick={() => navigate('/profile')}
               className="flex items-center space-x-2.5 hover:opacity-85 transition-opacity text-left outline-none"
@@ -243,6 +271,58 @@ export const DashboardLayout: React.FC = () => {
               </div>
             </button>
 
+            {/* Tuerca de Configuración y Menú Desplegable */}
+            <div className="relative">
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="p-2 rounded-xl border border-[#1E2640] bg-[#0A0D15]/40 text-slate-400 hover:text-[#D4AF37] hover:border-[#D4AF37]/25 transition-all outline-none"
+                title="Configuración y Ayuda"
+              >
+                <Settings className={`h-4.5 w-4.5 transition-transform duration-300 ${isDropdownOpen ? 'rotate-90 text-[#D4AF37]' : ''}`} />
+              </button>
+
+              {/* Menú Desplegable Dropdown */}
+              {isDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-[#0F1420] border border-[#1E2640] rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 font-mono text-xs">
+                    <button
+                      onClick={() => { navigate('/profile'); setIsDropdownOpen(false); }}
+                      className="w-full px-4 py-2.5 hover:bg-[#1E2640]/55 hover:text-[#D4AF37] text-left text-slate-300 font-semibold transition-all flex items-center space-x-2"
+                    >
+                      <UserCog className="h-4 w-4 text-[#D4AF37]" />
+                      <span>Mi Perfil (M10)</span>
+                    </button>
+                    <button
+                      onClick={() => { navigate('/settings'); setIsDropdownOpen(false); }}
+                      className="w-full px-4 py-2.5 hover:bg-[#1E2640]/55 hover:text-[#D4AF37] text-left text-slate-300 font-semibold transition-all flex items-center space-x-2"
+                    >
+                      <Settings className="h-4 w-4 text-[#D4AF37]" />
+                      <span>Configuración (M11)</span>
+                    </button>
+                    <button
+                      onClick={() => { navigate('/help'); setIsDropdownOpen(false); }}
+                      className="w-full px-4 py-2.5 hover:bg-[#1E2640]/55 hover:text-[#D4AF37] text-left text-slate-300 font-semibold transition-all flex items-center space-x-2"
+                    >
+                      <HelpCircle className="h-4 w-4 text-[#D4AF37]" />
+                      <span>Centro de Ayuda (M9)</span>
+                    </button>
+                    <div className="h-[1px] bg-[#1E2640] my-1" />
+                    <button
+                      onClick={() => { setIsLogoutModalOpen(true); setIsDropdownOpen(false); }}
+                      className="w-full px-4 py-2.5 hover:bg-[#FF1744]/10 hover:text-[#FF1744] text-left text-slate-400 font-semibold transition-all flex items-center space-x-2"
+                    >
+                      <LogOut className="h-4 w-4 text-[#FF1744]" />
+                      <span>Cerrar Sesión</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
           </div>
         </header>
 
@@ -251,6 +331,45 @@ export const DashboardLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* MODAL VERIFICACIÓN CERRAR SESIÓN (Y/N) */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 bg-[#0B0F19]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0F1420] border border-[#1E2640] rounded-3xl p-6 w-full max-w-sm text-xs flex flex-col justify-between shadow-2xl relative font-mono animate-in fade-in zoom-in-95 duration-200">
+            
+            <div className="border-b border-[#1E2640]/60 pb-3 mb-5 text-center">
+              <LogOut className="h-7 w-7 text-[#FF1744] mx-auto mb-2" />
+              <strong className="text-base text-slate-200 font-extrabold block">
+                ¿Cerrar Sesión?
+              </strong>
+              <span className="text-[9px] text-[#FF1744] font-bold uppercase tracking-wider block mt-1">
+                Verificación de Seguridad
+              </span>
+            </div>
+
+            <div className="space-y-6 text-center">
+              <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+                ¿Está seguro de que desea salir del sistema de telemonitoreo AURA? Perderá acceso inmediato a los paneles en tiempo real.
+              </p>
+              
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleLogout}
+                  className="flex-1 py-2.5 bg-[#FF1744] hover:bg-[#FF1744]/90 text-black font-extrabold text-xs rounded-xl transition-all uppercase tracking-wider text-center"
+                >
+                  Sí (Confirmar)
+                </button>
+                <button
+                  onClick={() => setIsLogoutModalOpen(false)}
+                  className="flex-1 py-2.5 bg-black/25 text-slate-400 border border-[#1E2640] hover:text-slate-200 font-extrabold text-xs rounded-xl transition-all uppercase tracking-wider text-center"
+                >
+                  No (Cancelar)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

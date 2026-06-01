@@ -13,24 +13,24 @@ description: Cuando el modelo crea que sea necesario, si se llega a tocar cualqu
 
 ## MÓDULO 1: AUTENTICACIÓN Y ONBOARDING DE ASPIRANTES
 ### 1.1 Pantalla de Inicio de Sesión (Login)
-* **Layout:** Pantalla dividida. Izquierda: Branding e ilustración IoT animada sutilmente. Derecha: Formulario centrado.
-* **Componentes:** Inputs de texto flotantes para `username`/`email` y `password` (con alternador de icono de ojo). Botón principal "Iniciar Sesión". Enlace inferior "Solicitar registro".
-* **UX & Comportamiento:** Si el backend responde que `two_factor.enabled == true`, el formulario hace una transición deslizante y despliega 6 inputs para los números de verificación TOTP. Si el estado del usuario es `PENDING`, lo enruta forzadamente a la pantalla 1.4.
+* **Layout:** Pantalla dividida. Izquierda: Branding e ilustración IoT animada sutilmente. Derecha: Contenedor centrado.
+* **Componentes:** Único componente de alto impacto visual y diseño premium: botón "Iniciar Sesión con Google".
+* **UX & Comportamiento:** El usuario inicia sesión exclusivamente con Google. Si el backend responde con estado `incomplete` (usuario nuevo en Google OAuth), se le enruta al onboarding (1.2). Si responde con `pending_approval`, se le bloquea en la pantalla de espera (1.4). Si responde con `approved`, accede directamente.
 
-### 1.2 Pantalla de Selección de Tipo de Aspirante
-* **Layout:** Grid de tres columnas centrado en la pantalla.
+### 1.2 Pantalla de Selección de Tipo de Aspirante (Onboarding - Paso 1)
+* **Layout:** Grid de tres columnas centrado en la pantalla. Se activa si el estado del usuario es `incomplete`.
 * **Componentes:** Tres tarjetas interactivas de gran formato con iconos: **Doctor**, **Cliente (Clínica/Familiar)**, **Paciente**. Botón inferior "Continuar".
-* **UX & Comportamiento:** Al hacer clic en una tarjeta, esta se enmarca con un borde dorado brillante y cambia el estado de selección, desbloqueando el botón "Continuar".
+* **UX & Comportamiento:** Al hacer clic en una tarjeta, esta se enmarca con un borde dorado brillante y cambia el estado de selección, desbloqueando el botón "Continuar" para avanzar al formulario.
 
-### 1.3 Pantalla de Formulario de Registro
-* **Layout:** Formulario secuencial por pasos (*Stepper*).
-* **Componentes:** Inputs comunes (nombres, id nacional, email, teléfono). Inputs dinámicos: licencia médica/especialidad si es Doctor; razón social/tax_id si es Cliente. Caja *Drag & Drop* para el array `verification_documents`.
-* **UX & Comportamiento:** Validaciones en tiempo real en los inputs. Al presionar "Enviar", muestra animación de carga y persiste los datos en la colección `applicants` en estado `PENDING_APPROVAL`.
+### 1.3 Pantalla de Formulario de Registro (Onboarding - Paso 2)
+* **Layout:** Formulario secuencial por pasos (*Stepper*) para complementar datos faltantes.
+* **Componentes:** Inputs comunes pre-rellenados (nombres, email obtenidos de Google) e inputs a rellenar (id nacional, teléfono). Inputs dinámicos: licencia médica/especialidad si es Doctor; razón social/tax_id y tipo de cliente si es Cliente.
+* **UX & Comportamiento:** Al presionar "Enviar", muestra animación de carga y persiste los datos en la colección `applicants` (PENDING_APPROVAL) y actualiza al usuario en la colección `users` al estado `pending_approval`.
 
 ### 1.4 Pantalla de Carga y Espera
 * **Layout:** Pantalla completa en negro profundo con un pulso biométrico animado en CSS en el centro.
-* **Componentes:** Texto descriptivo dinámico explicando el estado de auditoría. Botón de escape "Volver al Inicio".
-* **UX & Comportamiento:** Bloquea la navegación. El middleware del frontend ancla aquí al usuario en estado `PENDING` hasta que el webhook de la base de datos cambie su estado a `APPROVED`.
+* **Componentes:** Texto descriptivo dinámico explicando el estado de auditoría y espera por aprobación de administración. Botón de escape "Volver al Inicio" para cerrar sesión.
+* **UX & Comportamiento:** Bloquea la navegación. El middleware del frontend ancla aquí al usuario en estado `pending_approval` e impide acceder a las rutas del Dashboard hasta que su estado cambie a `approved` en la base de datos.
 
 ---
 

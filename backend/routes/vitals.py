@@ -13,6 +13,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, st
 from pydantic import BaseModel
 
 from backend.services.database import db_service
+from backend.services.auth_utils import unsign_session_id
 from backend.models.user import TelemetryStatus
 from backend.models.applicant import ApprovalStatus
 
@@ -138,6 +139,28 @@ async def ws_vitals_endpoint(websocket: WebSocket, patient_id: str):
     WebSocket asíncrono para suscribirse al flujo en vivo de signos vitales.
     Soporta Redis Pub/Sub y cae a memoria local si no está Redis disponible.
     """
+    # Validar sesión por cookie HTTPOnly en el handshake del WebSocket
+    session_cookie = websocket.cookies.get("session_id")
+    if not session_cookie:
+        await websocket.accept()
+        await websocket.send_json({"error": "No autenticado. Cookie faltante."})
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+        
+    actual_session_id = unsign_session_id(session_cookie)
+    if not actual_session_id:
+        await websocket.accept()
+        await websocket.send_json({"error": "Sesión inválida o expirada."})
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+        
+    session_doc = await db_service.db.auth_sessions.find_one({"session_id": actual_session_id})
+    if not session_doc or session_doc["expires_at"] < datetime.utcnow():
+        await websocket.accept()
+        await websocket.send_json({"error": "Sesión expirada o no encontrada."})
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await manager.connect(patient_id, websocket)
     
     redis_pubsub = None

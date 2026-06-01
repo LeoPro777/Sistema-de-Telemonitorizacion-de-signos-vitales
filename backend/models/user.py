@@ -15,45 +15,47 @@ class UserRole(str, Enum):
     CLIENT = "CLIENT"
 
 class UserStatus(str, Enum):
-    PENDING = "PENDING"
-    ACTIVE = "ACTIVE"
-    SUSPENDED = "SUSPENDED"
+    INCOMPLETE = "incomplete"
+    PENDING_APPROVAL = "pending_approval"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    SUSPENDED = "suspended"
 
 class TelemetryStatus(str, Enum):
     NORMAL = "NORMAL"
     WARNING = "WARNING"
     CRITICAL = "CRITICAL"
 
-
-class TwoFactorSchema(BaseModel):
-    enabled: bool = False
-    secret: Optional[str] = None
-
 class DeviceInfoSchema(BaseModel):
     user_agent: str
     ip_address: str
 
 class UserBase(BaseModel):
-    username: str
+    google_id: str
     email: EmailStr
-    role: UserRole
-    status: UserStatus = UserStatus.PENDING
-    two_factor: TwoFactorSchema = Field(default_factory=TwoFactorSchema)
+    first_name: str
+    last_name: str
+    avatar_url: str
+    role: Optional[UserRole] = None
+    status: UserStatus = UserStatus.INCOMPLETE
 
 class UserCreate(BaseModel):
-    username: str
+    google_id: str
     email: EmailStr
-    password: str
-    role: UserRole
-    two_factor: Optional[TwoFactorSchema] = Field(default_factory=TwoFactorSchema)
+    first_name: str
+    last_name: str
+    avatar_url: str
+    role: Optional[UserRole] = None
 
 class UserResponse(BaseModel):
     id: PyObjectId = Field(alias="_id")
-    username: str
+    google_id: str
     email: EmailStr
-    role: UserRole
+    first_name: str
+    last_name: str
+    avatar_url: str
+    role: Optional[UserRole] = None
     status: UserStatus
-    two_factor: TwoFactorSchema
     created_at: datetime
     updated_at: datetime
 
@@ -62,14 +64,13 @@ class UserResponse(BaseModel):
         json_schema_extra = {
             "example": {
                 "id": "60c72b2f9b1d8b2a3c8e4d21",
-                "username": "dr_smith",
+                "google_id": "11223344556677889900",
                 "email": "smith@clinic.com",
+                "first_name": "Pedro",
+                "last_name": "Smith",
+                "avatar_url": "https://lh3.googleusercontent.com/a/AATXAJ...",
                 "role": "DOCTOR",
-                "status": "PENDING",
-                "two_factor": {
-                    "enabled": False,
-                    "secret": None
-                },
+                "status": "approved",
                 "created_at": "2026-05-30T12:00:00Z",
                 "updated_at": "2026-05-30T12:00:00Z"
             }
@@ -77,23 +78,15 @@ class UserResponse(BaseModel):
 
 class AuthSessionBase(BaseModel):
     user_id: PyObjectId
-    refresh_token: str
+    session_id: str
     device_info: DeviceInfoSchema
     expires_at: datetime
     created_at: datetime
 
-class LoginRequest(BaseModel):
-    username_or_email: str
-    password: str
+class GoogleLoginRequest(BaseModel):
+    token: str
 
 class LoginResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
+    success: bool
     user: UserResponse
-    two_factor_required: bool = False
-    temp_token: Optional[str] = None  # Token temporal usado si se requiere verificar 2FA
 
-class Verify2FARequest(BaseModel):
-    temp_token: str
-    otp_code: str

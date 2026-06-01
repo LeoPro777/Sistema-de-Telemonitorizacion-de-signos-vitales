@@ -24,6 +24,8 @@ redis>=5.3.0                # Cliente Python async/sync para Redis
 # ── Autenticación JWT ─────────────────────────────────────────────────────────
 python-jose[cryptography]>=3.3.0  # Creación y validación de tokens JWT
 passlib[bcrypt]>=1.7.4            # Hash de contraseñas con bcrypt
+google-auth>=2.28.1               # Validación nativa de tokens de Google
+requests>=2.31.0                  # Requerido por google-auth transport
 
 # ── HTTP & Utilidades ─────────────────────────────────────────────────────────
 httpx>=0.28.1               # Cliente HTTP async (tests + llamadas internas)

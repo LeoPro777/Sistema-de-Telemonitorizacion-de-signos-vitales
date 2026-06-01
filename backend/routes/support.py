@@ -118,7 +118,7 @@ async def get_article_detail(
 @router.post("/articles/{id}/vote", response_model=HelpArticleResponse)
 async def vote_article(
     id: str,
-    vote_type: str = Query(..., regex="^(useful|not_useful)$", description="Tipo de voto: useful o not_useful"),
+    vote_type: str = Query(..., pattern="^(useful|not_useful)$", description="Tipo de voto: useful o not_useful"),
     current_user: UserResponse = Depends(get_current_user)
 ):
     """
@@ -147,7 +147,7 @@ async def vote_article(
     return HelpArticleResponse(**res)
 
 
-@router.post("/tickets", response_model=SupportTicketResponse, status_code=status.HTTP_218_2FA_REQUIRED or status.HTTP_201_CREATED)
+@router.post("/tickets", response_model=SupportTicketResponse, status_code=status.HTTP_201_CREATED)
 async def create_support_ticket(
     req: SupportTicketCreate,
     current_user: UserResponse = Depends(get_current_user)

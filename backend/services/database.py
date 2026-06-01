@@ -40,8 +40,8 @@ class DatabaseService:
             await self.redis.ping()
             logger.info("Conexión a Redis exitosa.")
         except Exception as e:
-            logger.error(f"Error al conectar a Redis: {e}")
-            raise e
+            logger.warning(f"Error al conectar a Redis (Bypass offline): {e}")
+            self.redis = None
 
     async def disconnect(self):
         """
