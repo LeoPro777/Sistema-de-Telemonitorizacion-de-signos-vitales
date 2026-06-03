@@ -41,7 +41,7 @@ class VitalsSocketService {
     // Determinar dirección base
     const baseHost = (import.meta as any).env.VITE_WS_BASE_URL 
       ? (import.meta as any).env.VITE_WS_BASE_URL.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '')
-      : 'localhost:8000';
+      : window.location.host;
       
     const socketUrl = `${wsProtocol}//${baseHost}/ws/vitals/${this.patientId}`;
     console.log(`Abriendo canal de telemetría por WebSocket: ${socketUrl}`);

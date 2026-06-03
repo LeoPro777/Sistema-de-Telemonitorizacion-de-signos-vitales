@@ -34,13 +34,15 @@ import './index.css'
 
 // Guardián para proteger rutas autenticadas
 const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
-  const { isLoggedIn, user, isLoading, checkAuth } = useAuthStore()
+  const { isLoggedIn, user, isLoading, isInitialized, checkAuth } = useAuthStore()
 
   useEffect(() => {
-    checkAuth()
-  }, [checkAuth])
+    if (!isInitialized && !isLoading) {
+      checkAuth()
+    }
+  }, [isInitialized, isLoading, checkAuth])
 
-  if (isLoading) {
+  if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
@@ -152,13 +154,10 @@ const App: React.FC = () => {
   )
 }
 
-import { GoogleOAuthProvider } from '@react-oauth/google';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
-      <App />
-    </GoogleOAuthProvider>
+    <App />
   </React.StrictMode>
 )
 

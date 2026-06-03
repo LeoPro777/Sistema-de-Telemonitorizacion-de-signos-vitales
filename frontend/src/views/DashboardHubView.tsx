@@ -32,6 +32,9 @@ const alertTrendData = [
 
 export const DashboardHubView: React.FC = () => {
   const { user } = useAuthStore();
+  const displayName = user 
+    ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Usuario'
+    : 'Usuario';
   const [widgets, setWidgets] = useState<any[]>([]);
   const [kpis, setKpis] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -125,7 +128,7 @@ export const DashboardHubView: React.FC = () => {
             CONSOLA CENTRALIZADA
           </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Hola, Dr/Administrador {user?.username}
+            Hola, Dr/Administrador {displayName}
           </h2>
           <p className="text-xs text-slate-400 mt-1">
             Caché precalculada. Última actualización general: <strong className="text-slate-300">{lastUpdate}</strong>.

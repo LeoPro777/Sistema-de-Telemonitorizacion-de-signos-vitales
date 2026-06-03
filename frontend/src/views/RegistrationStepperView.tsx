@@ -110,11 +110,6 @@ export const RegistrationStepperView: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (uploadedFiles.length === 0) {
-      toast.error('Debe cargar al menos un documento de verificación');
-      return;
-    }
-    
     setIsSubmitting(true);
     
     // Mapear los metadatos específicos según rol
@@ -182,7 +177,7 @@ export const RegistrationStepperView: React.FC = () => {
         
         {/* Indicador visual de los pasos */}
         <div className="flex items-center justify-between mb-8 px-4">
-          {[1, 2, 3].map((step) => (
+          {[1, 2].map((step) => (
             <React.Fragment key={step}>
               <div className="flex items-center space-x-2.5">
                 <div className={`h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs border transition-all duration-300 ${
@@ -197,10 +192,10 @@ export const RegistrationStepperView: React.FC = () => {
                 <span className={`text-xs font-bold uppercase tracking-wider hidden sm:inline ${
                   currentStep === step ? 'text-slate-100' : 'text-slate-500'
                 }`}>
-                  {step === 1 ? 'Personales' : step === 2 ? 'Específicos' : 'Auditoría'}
+                  {step === 1 ? 'Personales' : 'Específicos'}
                 </span>
               </div>
-              {step < 3 && (
+              {step < 2 && (
                 <div className={`flex-grow h-[1px] mx-4 border-t border-dashed ${
                   currentStep > step ? 'border-[#D4AF37]/40' : 'border-[#1E2640]'
                 }`} />
@@ -404,73 +399,7 @@ export const RegistrationStepperView: React.FC = () => {
             </div>
           )}
 
-          {/* PASO 3: ARCHIVOS Y VERIFICACIÓN DRAG & DROP */}
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              <div className="mb-4">
-                <h3 className="text-xl font-bold tracking-tight">Documentación de Soporte</h3>
-                <p className="text-xs text-slate-400 mt-1">Cargue documentos que verifiquen su identidad y licencia médica.</p>
-              </div>
 
-              {/* Area Drag & Drop */}
-              <div
-                onDragEnter={handleDrag}
-                onDragOver={handleDrag}
-                onDragLeave={handleDrag}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-3xl p-8 text-center flex flex-col items-center justify-center transition-all ${
-                  dragActive
-                    ? 'border-[#D4AF37] bg-[#D4AF37]/5'
-                    : 'border-[#1E2640] hover:border-[#1E2640]/80 bg-black/10'
-                }`}
-              >
-                <input
-                  type="file"
-                  id="file-upload"
-                  onChange={handleFileInput}
-                  className="hidden"
-                />
-                
-                <UploadCloud className="h-12 w-12 text-[#D4AF37] mb-4 stroke-[1.5]" />
-                
-                <p className="text-sm font-bold text-slate-200">Arrastre y suelte su archivo aquí</p>
-                <p className="text-xs text-slate-500 mt-1.5">Formatos soportados: PDF, JPG, PNG (máx. 10MB)</p>
-                
-                <label
-                  htmlFor="file-upload"
-                  className="mt-5 px-5 py-2 bg-[#1E2640] text-[#D4AF37] text-xs font-semibold rounded-lg hover:bg-[#1E2640]/80 cursor-pointer border border-[#D4AF37]/20 transition-all"
-                >
-                  Examinar Archivos
-                </label>
-              </div>
-
-              {/* Lista de archivos cargados */}
-              {uploadedFiles.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Documentos Cargados</h4>
-                  <div className="space-y-2">
-                    {uploadedFiles.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3.5 bg-[#0B0F19] rounded-xl border border-[#1E2640]">
-                        <div className="flex items-center space-x-3 overflow-hidden">
-                          <FileText className="h-5 w-5 text-[#D4AF37] flex-shrink-0" />
-                          <div className="truncate pr-4">
-                            <p className="text-xs font-bold truncate text-slate-200">{file.name}</p>
-                            <p className="text-[10px] text-slate-500">{file.size}</p>
-                          </div>
-                        </div>
-
-                        {file.status === 'uploading' ? (
-                          <div className="w-4 h-4 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                        ) : (
-                          <CheckCircle className="h-5 w-5 text-emerald-400 flex-shrink-0" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Botones de navegación del stepper */}
           <div className="flex items-center justify-between mt-8 border-t border-[#1E2640]/50 pt-6">
@@ -482,7 +411,7 @@ export const RegistrationStepperView: React.FC = () => {
               <span>Atrás</span>
             </button>
 
-            {currentStep < 3 ? (
+            {currentStep < 2 ? (
               <button
                 onClick={handleNextStep}
                 className="px-6 py-2.5 bg-[#1E2640] text-[#D4AF37] hover:bg-[#1E2640]/80 text-sm font-semibold rounded-xl border border-[#D4AF37]/20 flex items-center space-x-1.5 transition-all"
@@ -493,7 +422,7 @@ export const RegistrationStepperView: React.FC = () => {
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting || uploadedFiles.length === 0}
+                disabled={isSubmitting}
                 className="px-6 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#AA820A] text-black font-bold text-sm rounded-xl hover:from-[#E5BE48] hover:to-[#BC931B] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5"
               >
                 {isSubmitting ? (

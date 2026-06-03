@@ -34,10 +34,31 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+import time
+from fastapi import Request
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = (time.time() - start_time) * 1000
+    
+    try:
+        with open("backend_requests.log", "a", encoding="utf-8") as f:
+            cookie_header = request.headers.get("cookie", "None")
+            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {request.method} {request.url.path} - Status: {response.status_code} - Cookie: {cookie_header} - Time: {process_time:.2f}ms\n")
+    except Exception:
+        pass
+        
+    return response
+
 # Configuración de CORS
+from backend.config import settings
+origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",")] if settings.ALLOWED_ORIGINS else ["http://localhost:5173", "http://127.0.0.1:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Permitir todos para desarrollo
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

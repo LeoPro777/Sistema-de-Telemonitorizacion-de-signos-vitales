@@ -58,6 +58,16 @@ class UserResponse(BaseModel):
     status: UserStatus
     created_at: datetime
     updated_at: datetime
+    from pydantic import field_validator
+    @field_validator('role', mode='before')
+    def parse_role(cls, v):
+        if v == "None" or v == "" or v is None:
+            return None
+        if isinstance(v, str):
+            v_up = v.upper()
+            if v_up in [e.value for e in UserRole]:
+                return UserRole(v_up)
+        return v
 
     class Config:
         populate_by_name = True
@@ -84,7 +94,9 @@ class AuthSessionBase(BaseModel):
     created_at: datetime
 
 class GoogleLoginRequest(BaseModel):
-    token: str
+    token: Optional[str] = None
+    code: Optional[str] = None
+    redirect_uri: Optional[str] = None
 
 class LoginResponse(BaseModel):
     success: bool

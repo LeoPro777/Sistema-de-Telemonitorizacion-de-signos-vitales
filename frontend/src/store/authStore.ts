@@ -21,13 +21,14 @@ interface AuthState {
   user: User | null;
   isLoggedIn: boolean;
   isLoading: boolean;
+  isInitialized: boolean;
   
   // Flujo de Onboarding
   selectedRole: UserRole | null;
   setSelectedRole: (role: UserRole | null) => void;
   
   // Acciones
-  googleLogin: (token: string) => Promise<any>;
+  googleLogin: (tokenOrCode: string, isCodeFlow?: boolean) => Promise<any>;
   onboarding: (role: UserRole, personalData: any, professionalMetadata: any) => Promise<any>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -37,14 +38,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoggedIn: false,
   isLoading: false,
+  isInitialized: false,
   selectedRole: null,
   
   setSelectedRole: (role) => set({ selectedRole: role }),
   
-  googleLogin: async (token) => {
+  googleLogin: async (tokenOrCode, isCodeFlow = false) => {
     set({ isLoading: true });
     try {
-      const response = await api.post('/auth/google-login', { token });
+      const payload = isCodeFlow
+        ? { code: tokenOrCode, redirect_uri: `${window.location.origin}/login` }
+        : { token: tokenOrCode };
+      const response = await api.post('/auth/google-login', payload);
       const { user } = response.data;
       
       // Guardar bandera en localStorage para recordar intención de sesión
@@ -54,10 +59,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: user,
         isLoggedIn: true,
         isLoading: false,
+        isInitialized: true,
       });
       return { success: true, user };
     } catch (error: any) {
-      set({ isLoading: false, isLoggedIn: false, user: null });
+      set({ isLoading: false, isLoggedIn: false, user: null, isInitialized: true });
       localStorage.removeItem('aura_logged_in');
       const detail = error?.response?.data?.detail;
       if (typeof detail === 'string') throw detail;
@@ -100,26 +106,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         isLoggedIn: false,
         isLoading: false,
+        isInitialized: true,
         selectedRole: null,
       });
     }
   },
   
   checkAuth: async () => {
-    // Si no hay bandera local, evitamos llamada innecesaria al servidor
-    const auraLoggedIn = localStorage.getItem('aura_logged_in');
-    if (!auraLoggedIn) {
-      set({ user: null, isLoggedIn: false, isLoading: false });
-      return;
-    }
-    
     set({ isLoading: true });
     try {
       const response = await api.get('/auth/me');
+      localStorage.setItem('aura_logged_in', 'true');
       set({
         user: response.data,
         isLoggedIn: true,
         isLoading: false,
+        isInitialized: true,
       });
     } catch (error) {
       localStorage.removeItem('aura_logged_in');
@@ -127,6 +129,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         isLoggedIn: false,
         isLoading: false,
+        isInitialized: true,
       });
     }
   },

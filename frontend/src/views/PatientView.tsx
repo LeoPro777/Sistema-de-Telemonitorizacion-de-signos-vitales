@@ -9,6 +9,9 @@ import toast from 'react-hot-toast';
 export const PatientView: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const displayName = user 
+    ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Usuario'
+    : 'Usuario';
   
   const [patientData, setPatientData] = useState<any>(null);
   const [pulse, setPulse] = useState<number>(75);
@@ -169,7 +172,7 @@ export const PatientView: React.FC = () => {
           <div>
             <span className="text-[9px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block">PACIENTE ACTIVO</span>
             <h3 className="text-base font-extrabold text-slate-200">
-              {patientData ? `${patientData.first_name} ${patientData.last_name}` : user?.username}
+              {patientData ? `${patientData.first_name} ${patientData.last_name}` : displayName}
             </h3>
             <p className="text-[10px] text-slate-500">Expediente: {patientData?.medical_record_id || 'N/A'}</p>
           </div>

@@ -18,6 +18,14 @@ export const DashboardLayout: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
+  const displayName = user 
+    ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Usuario'
+    : 'Usuario';
+    
+  const initials = user 
+    ? ((user.first_name || '').slice(0, 2) || (user.email || '').slice(0, 2) || 'US').toUpperCase() 
+    : 'US';
+
   // Auto-colapsar menú en pantallas pequeñas
   useEffect(() => {
     const handleResize = () => {
@@ -174,10 +182,10 @@ export const DashboardLayout: React.FC = () => {
               <div className="flex items-center space-x-2.5 overflow-hidden">
                 {/* Avatar simulado */}
                 <div className="h-9 w-9 bg-[#1E2640] rounded-xl flex items-center justify-center border border-[#D4AF37]/25 text-[#D4AF37] font-bold flex-shrink-0 text-xs shadow-md">
-                  {user?.username.slice(0, 2).toUpperCase()}
+                  {initials}
                 </div>
                 <div className="overflow-hidden">
-                  <h4 className="text-xs font-bold text-slate-200 truncate">{user?.username}</h4>
+                  <h4 className="text-xs font-bold text-slate-200 truncate">{displayName}</h4>
                   <p className="text-[10px] text-slate-500 font-semibold uppercase truncate">{user?.role}</p>
                 </div>
               </div>
@@ -263,10 +271,10 @@ export const DashboardLayout: React.FC = () => {
               className="flex items-center space-x-2.5 hover:opacity-85 transition-opacity text-left outline-none"
             >
               <div className="h-8 w-8 bg-[#1E2640] rounded-lg border border-[#D4AF37]/20 text-[#D4AF37] font-bold flex items-center justify-center text-[10px] shadow-sm">
-                {user?.username.slice(0, 2).toUpperCase()}
+                {initials}
               </div>
               <div className="hidden lg:block">
-                <p className="text-xs font-bold text-slate-300">{user?.username}</p>
+                <p className="text-xs font-bold text-slate-300">{displayName}</p>
                 <p className="text-[9px] text-slate-500 font-semibold">{user?.email}</p>
               </div>
             </button>
