@@ -30,10 +30,10 @@ async def get_user_profile(current_user: UserResponse = Depends(get_current_user
         # Generamos datos semilla a partir de la cuenta principal del usuario
         default_profile = {
             "user_id": ObjectId(current_user.id),
-            "google_avatar_url": f"https://api.dicebear.com/7.x/adventurer/svg?seed={current_user.username}",
+            "google_avatar_url": current_user.avatar_url or f"https://api.dicebear.com/7.x/adventurer/svg?seed={current_user.email}",
             "personal_data": {
-                "first_name": current_user.username.split('_')[0].capitalize(),
-                "last_name": current_user.username.split('_')[1].capitalize() if '_' in current_user.username else "Usuario",
+                "first_name": current_user.first_name,
+                "last_name": current_user.last_name if current_user.last_name else "Usuario",
                 "email": current_user.email,
                 "phone": "+56 9 8765 4321",
                 "address": "Av. Vitacura 1230, Santiago, Chile",
