@@ -2,7 +2,7 @@
 applicants.py — Rutas para Onboarding de Aspirantes y Aprobación Administrativa
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
@@ -102,7 +102,7 @@ async def review_applicant(email: str, req: ReviewRequest):
             detail="Usuario asociado no encontrado."
         )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # 3. Actualizar la solicitud del aspirante
     audit_review = {

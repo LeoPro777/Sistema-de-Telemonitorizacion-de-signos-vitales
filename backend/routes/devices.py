@@ -4,7 +4,7 @@ devices.py — Rutas REST de Gestión de Dispositivos (Módulo 5: Inventario Té
 
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -27,10 +27,10 @@ router = APIRouter(prefix="/devices", tags=["Gestión de Dispositivos (M5)"])
 class HardwareMetricsSchema(BaseModel):
     battery_percent: int = Field(100, ge=0, le=100)
     signal_strength_dbm: int = Field(-50, ge=-110, le=-30)
-    last_ping_at: datetime = Field(default_factory=datetime.utcnow)
+    last_ping_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ApprovalDetailsSchema(BaseModel):
-    submitted_at: datetime = Field(default_factory=datetime.utcnow)
+    submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     reviewed_at: Optional[datetime] = None
     reviewed_by: Optional[PyObjectId] = None
 
@@ -193,7 +193,7 @@ async def provision_device(req: DeviceCreate, current_user: UserResponse = Depen
         "is_active": True,
         "approval_status": "PENDING_APPROVAL",
         "approval_details": {
-            "submitted_at": datetime.utcnow(),
+            "submitted_at": datetime.now(timezone.utc),
             "reviewed_at": None,
             "reviewed_by": None
         },
@@ -201,7 +201,7 @@ async def provision_device(req: DeviceCreate, current_user: UserResponse = Depen
         "hardware_metrics": {
             "battery_percent": 100,
             "signal_strength_dbm": -50,
-            "last_ping_at": datetime.utcnow()
+            "last_ping_at": datetime.now(timezone.utc)
         },
         "has_hardware_alert": False
     }
@@ -244,7 +244,7 @@ async def approve_device(id: str, current_user: UserResponse = Depends(get_curre
     update_payload = {
         "approval_status": "APPROVED",
         "operational_status": "AVAILABLE",
-        "approval_details.reviewed_at": datetime.utcnow(),
+        "approval_details.reviewed_at": datetime.now(timezone.utc),
         "approval_details.reviewed_by": ObjectId(current_user.id)
     }
 
@@ -281,7 +281,7 @@ async def reject_device(id: str, current_user: UserResponse = Depends(get_curren
             "$set": {
                 "approval_status": "REJECTED",
                 "operational_status": "MAINTENANCE",
-                "approval_details.reviewed_at": datetime.utcnow(),
+                "approval_details.reviewed_at": datetime.now(timezone.utc),
                 "approval_details.reviewed_by": ObjectId(current_user.id)
             }
         }

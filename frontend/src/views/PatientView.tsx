@@ -24,6 +24,25 @@ export const PatientView: React.FC = () => {
   const [tempStatus, setTempStatus] = useState<string>('NORMAL');
   const [overallStatus, setOverallStatus] = useState<string>('NORMAL');
 
+  const [isDeviceActive, setIsDeviceActive] = useState<boolean>(false);
+  const [lastDataTimestamp, setLastDataTimestamp] = useState<number | null>(null);
+
+  // Watchdog para detectar desconexión (si pasan más de 15s sin trama)
+  useEffect(() => {
+    if (!lastDataTimestamp) return;
+    const watchdog = setInterval(() => {
+      const now = new Date().getTime();
+      if (now - lastDataTimestamp > 15000) {
+        setIsDeviceActive(false);
+        setPulseStatus('OFFLINE');
+        setSpo2Status('OFFLINE');
+        setTempStatus('OFFLINE');
+        setOverallStatus('OFFLINE');
+      }
+    }, 2000);
+    return () => clearInterval(watchdog);
+  }, [lastDataTimestamp]);
+
   // 1. Obtener expediente de paciente autenticado
   useEffect(() => {
     const fetchPatientProfile = async () => {
@@ -53,6 +72,9 @@ export const PatientView: React.FC = () => {
             onMessage: (message) => {
               // Recibe la trama en vivo
               const { telemetry, status, cache, new_alerts } = message;
+              
+              setIsDeviceActive(true);
+              setLastDataTimestamp(new Date().getTime());
               
               setPulse(telemetry.heart_rate);
               setSpo2(telemetry.spo2);
@@ -120,6 +142,13 @@ export const PatientView: React.FC = () => {
           text: 'text-[#FFD700] text-glow-gold',
           glow: 'shadow-[0_0_15px_rgba(255,215,0,0.15)]'
         };
+      case 'OFFLINE':
+        return {
+          border: 'border-[#1E2640] bg-[#0A0D15]',
+          badge: 'bg-[#1E2640]/50 text-slate-500 border-[#1E2640]',
+          text: 'text-slate-600',
+          glow: ''
+        };
       default: // NORMAL
         return {
           border: 'border-[#00F2FE]/20 bg-glass',
@@ -169,9 +198,16 @@ export const PatientView: React.FC = () => {
           <div className="h-12 w-12 bg-[#1E2640] rounded-xl flex items-center justify-center border border-[#D4AF37]/25 text-[#D4AF37] font-bold text-sm">
             <User className="h-6 w-6" />
           </div>
-          <div>
-            <span className="text-[9px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block">PACIENTE ACTIVO</span>
-            <h3 className="text-base font-extrabold text-slate-200">
+          <div className="flex-1">
+            <div className="flex justify-between items-center w-full">
+              <span className="text-[9px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block">PACIENTE ACTIVO</span>
+              {isDeviceActive ? (
+                <span className="text-[8px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold animate-pulse">EN VIVO</span>
+              ) : (
+                <span className="text-[8px] bg-slate-800 text-slate-500 border border-slate-700 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">DESCONECTADO</span>
+              )}
+            </div>
+            <h3 className="text-base font-extrabold text-slate-200 mt-0.5">
               {patientData ? `${patientData.first_name} ${patientData.last_name}` : displayName}
             </h3>
             <p className="text-[10px] text-slate-500">Expediente: {patientData?.medical_record_id || 'N/A'}</p>
@@ -198,7 +234,7 @@ export const PatientView: React.FC = () => {
             <span className={`text-6xl font-black tracking-tight transition-all duration-300 ${pulseStyle.text} ${
               pulseStatus === 'CRITICAL' ? 'animate-[pulse_0.7s_infinite]' : ''
             }`}>
-              {pulse}
+              {isDeviceActive ? pulse : '--'}
             </span>
             <span className="text-base font-bold text-slate-500">bpm</span>
           </div>
@@ -225,7 +261,7 @@ export const PatientView: React.FC = () => {
 
           <div className="my-6 flex items-baseline justify-center space-x-1">
             <span className={`text-6xl font-black tracking-tight transition-all duration-300 ${spo2Style.text}`}>
-              {spo2}
+              {isDeviceActive ? spo2 : '--'}
             </span>
             <span className="text-base font-bold text-slate-500">%</span>
           </div>
@@ -253,7 +289,7 @@ export const PatientView: React.FC = () => {
 
           <div className="my-6 flex items-baseline justify-center space-x-1">
             <span className={`text-6xl font-black tracking-tight transition-all duration-300 ${tempStyle.text}`}>
-              {temp}
+              {isDeviceActive ? temp : '--'}
             </span>
             <span className="text-base font-bold text-slate-500">°C</span>
           </div>

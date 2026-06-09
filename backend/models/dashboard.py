@@ -16,6 +16,7 @@ class DashboardConfigBase(BaseModel):
     layout_version: str = "1.0.0"
     visible_widgets: List[WidgetConfigSchema] = Field(default_factory=list)
     theme_preference: str = "premium_dark"
+    time_format: str = "24h"
 
 class DashboardConfigCreate(DashboardConfigBase):
     user_id: PyObjectId
@@ -31,6 +32,7 @@ class DashboardConfigUpdate(BaseModel):
     layout_version: Optional[str] = None
     visible_widgets: Optional[List[WidgetConfigSchema]] = None
     theme_preference: Optional[str] = None
+    time_format: Optional[str] = None
 
 class DashboardKPICacheResponse(BaseModel):
     id: str = Field(alias="_id")

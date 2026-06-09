@@ -2,7 +2,7 @@
 profile.py — Rutas para la Gestión de Perfil de Usuario
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Optional
@@ -26,7 +26,7 @@ async def get_user_profile(current_user: UserResponse = Depends(get_current_user
     profile = await db_service.db.user_profiles.find_one({"user_id": ObjectId(current_user.id)})
     
     if not profile:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         # Generamos datos semilla a partir de la cuenta principal del usuario
         default_profile = {
             "user_id": ObjectId(current_user.id),
@@ -35,9 +35,9 @@ async def get_user_profile(current_user: UserResponse = Depends(get_current_user
                 "first_name": current_user.first_name,
                 "last_name": current_user.last_name if current_user.last_name else "Usuario",
                 "email": current_user.email,
-                "phone": "+56 9 8765 4321",
-                "address": "Av. Vitacura 1230, Santiago, Chile",
-                "identification_number": "12.345.678-9"
+                "phone": "+58 412 8765432",
+                "address": "Av. Francisco de Miranda, Caracas, Venezuela",
+                "identification_number": "V-12345678"
             },
             "role_specific_data": {},
             "updated_at": now
@@ -46,13 +46,13 @@ async def get_user_profile(current_user: UserResponse = Depends(get_current_user
         # Enriquecer rol-specific data si es necesario
         if current_user.role == "DOCTOR":
             default_profile["role_specific_data"] = {
-                "medical_license": "LIC-99011-CL",
+                "medical_license": "LIC-99011-VE",
                 "specialty": "Cardiología Clínica",
                 "office_location": "Consultorio 402, Ala Sur"
             }
         elif current_user.role == "CLIENT":
             default_profile["role_specific_data"] = {
-                "tax_id": "76.123.456-K",
+                "tax_id": "J-76123456-9",
                 "corporate_name": "Clínicas Médicas Integrales S.A.",
                 "client_type": "CLINICA"
             }
@@ -108,7 +108,7 @@ async def update_user_profile(
         )
 
     # Actualizamos el timestamp de actualización
-    update_query["updated_at"] = datetime.utcnow()
+    update_query["updated_at"] = datetime.now(timezone.utc)
 
     res = await db_service.db.user_profiles.find_one_and_update(
         {"user_id": ObjectId(current_user.id)},

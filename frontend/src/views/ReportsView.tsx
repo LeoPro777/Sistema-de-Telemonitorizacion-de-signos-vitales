@@ -35,11 +35,11 @@ export const ReportsView: React.FC = () => {
 
   // Lista de Pacientes Semilla para Autocompletado
   const mockPatients: MockPatient[] = [
-    { id: "P001", name: "Juan Pérez Astudillo", rut: "15.340.281-K", age: 67, condition: "Insuficiencia Cardíaca Congestiva" },
-    { id: "P002", name: "María Loreto González", rut: "9.872.104-5", age: 72, condition: "Hipertensión Arterial Severa" },
-    { id: "P003", name: "Carlos Muñoz Troncoso", rut: "12.443.902-1", age: 58, condition: "Monitoreo Post-Operatorio" },
-    { id: "P004", name: "Sofía Tapia Venegas", rut: "18.239.544-7", age: 64, condition: "EPOC e Hipoxia Crónica" },
-    { id: "P005", name: "Diego Astudillo Valenzuela", rut: "14.112.563-3", age: 49, condition: "Diabetes Mellitus Tipo II" }
+    { id: "P001", name: "Juan Pérez Astudillo", rut: "V-15340281", age: 67, condition: "Insuficiencia Cardíaca Congestiva" },
+    { id: "P002", name: "María Loreto González", rut: "V-9872104", age: 72, condition: "Hipertensión Arterial Severa" },
+    { id: "P003", name: "Carlos Muñoz Troncoso", rut: "V-12443902", age: 58, condition: "Monitoreo Post-Operatorio" },
+    { id: "P004", name: "Sofía Tapia Venegas", rut: "V-18239544", age: 64, condition: "EPOC e Hipoxia Crónica" },
+    { id: "P005", name: "Diego Astudillo Valenzuela", rut: "V-14112563", age: 49, condition: "Diabetes Mellitus Tipo II" }
   ];
 
   const filteredPatients = mockPatients.filter(p => 
@@ -285,7 +285,7 @@ export const ReportsView: React.FC = () => {
                       }
                     }}
                     onFocus={() => setShowPatientSuggestions(true)}
-                    placeholder="Escriba nombre o RUT del paciente..."
+                    placeholder="Escriba nombre o Cédula del paciente..."
                     className={`w-full pl-10 pr-10 py-2.5 bg-[#0B0F19] border rounded-xl text-xs outline-none transition-all ${
                       selectedPatient 
                         ? 'border-emerald-500 focus:border-emerald-500 text-emerald-400' 
@@ -315,7 +315,7 @@ export const ReportsView: React.FC = () => {
                         >
                           <div>
                             <strong className="text-xs text-slate-200 block">{p.name}</strong>
-                            <span className="text-[9px] text-slate-500">RUT: {p.rut} — Edad: {p.age} años</span>
+                            <span className="text-[9px] text-slate-500">Cédula: {p.rut} — Edad: {p.age} años</span>
                           </div>
                           <span className="text-[9px] text-[#D4AF37] font-semibold bg-[#D4AF37]/5 px-2 py-0.5 rounded border border-[#D4AF37]/15">
                             {p.id}
@@ -443,7 +443,7 @@ export const ReportsView: React.FC = () => {
                   Expediente de Monitoreo Clínico
                 </h1>
                 <p className="text-[9px] text-slate-500 font-sans uppercase">
-                  Generado automáticamente • {new Date().toLocaleString()}
+                  Generado automáticamente • {new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' })}
                 </p>
               </div>
 

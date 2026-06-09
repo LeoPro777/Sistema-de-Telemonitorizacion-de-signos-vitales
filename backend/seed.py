@@ -5,7 +5,7 @@ Permite probar los flujos de login, 2FA, onboarding, dashboard, pacientes y grá
 
 import asyncio
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -16,7 +16,7 @@ from backend.models.applicant import ApprovalStatus, ClientType
 
 async def run_seed():
     print(f"Iniciando seeding completo de MongoDB en: {settings.MONGO_URI}...")
-    client = AsyncIOMotorClient(settings.MONGO_URI)
+    client = AsyncIOMotorClient(settings.MONGO_URI, tz_aware=True)
     db = client[settings.MONGO_DB]
     
     # 1. Limpiar colecciones anteriores para evitar duplicados
@@ -30,7 +30,7 @@ async def run_seed():
         await db[col].delete_many({})
         print(f"Limpiada colección: {col}")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # 2. Generar Hashes de Contraseñas
     admin_hash = get_password_hash("admin123")
@@ -59,7 +59,7 @@ async def run_seed():
             "email": "admin@telemonitor.com",
             "password_hash": admin_hash,
             "role": UserRole.ADMIN,
-            "status": UserStatus.ACTIVE,
+            "status": UserStatus.APPROVED,
             "two_factor": {"enabled": False, "secret": None},
             "created_at": now,
             "updated_at": now
@@ -70,7 +70,7 @@ async def run_seed():
             "email": "lopez@clinic.com",
             "password_hash": doctor_hash,
             "role": UserRole.DOCTOR,
-            "status": UserStatus.ACTIVE,
+            "status": UserStatus.APPROVED,
             "two_factor": {"enabled": True, "secret": "JBSWY3DPEHPK3PXP"}, 
             "created_at": now,
             "updated_at": now
@@ -81,7 +81,7 @@ async def run_seed():
             "email": "gonzalez@clinic.com",
             "password_hash": doctor_hash,
             "role": UserRole.DOCTOR,
-            "status": UserStatus.ACTIVE,
+            "status": UserStatus.APPROVED,
             "two_factor": {"enabled": False, "secret": None}, 
             "created_at": now,
             "updated_at": now
@@ -92,7 +92,7 @@ async def run_seed():
             "email": "martinez@clinic.com",
             "password_hash": doctor_hash,
             "role": UserRole.DOCTOR,
-            "status": UserStatus.ACTIVE,
+            "status": UserStatus.APPROVED,
             "two_factor": {"enabled": False, "secret": None}, 
             "created_at": now,
             "updated_at": now
@@ -114,7 +114,7 @@ async def run_seed():
             "email": "contacto@central.com",
             "password_hash": client_hash,
             "role": UserRole.CLIENT,
-            "status": UserStatus.ACTIVE,
+            "status": UserStatus.APPROVED,
             "two_factor": {"enabled": False, "secret": None},
             "created_at": now,
             "updated_at": now
@@ -125,7 +125,7 @@ async def run_seed():
             "email": "juan@perez.com",
             "password_hash": patient_hash,
             "role": UserRole.PATIENT,
-            "status": UserStatus.ACTIVE,
+            "status": UserStatus.APPROVED,
             "two_factor": {"enabled": False, "secret": None},
             "created_at": now,
             "updated_at": now
@@ -136,7 +136,7 @@ async def run_seed():
             "email": "contacto@clinicasur.com",
             "password_hash": client_hash,
             "role": UserRole.CLIENT,
-            "status": UserStatus.ACTIVE,
+            "status": UserStatus.APPROVED,
             "two_factor": {"enabled": False, "secret": None}, 
             "created_at": now,
             "updated_at": now
@@ -147,7 +147,7 @@ async def run_seed():
             "email": "contacto@donbosco.com",
             "password_hash": client_hash,
             "role": UserRole.CLIENT,
-            "status": UserStatus.ACTIVE,
+            "status": UserStatus.APPROVED,
             "two_factor": {"enabled": False, "secret": None}, 
             "created_at": now,
             "updated_at": now
@@ -169,7 +169,7 @@ async def run_seed():
             "email": "garcia@hospital.com",
             "password_hash": pending_hash,
             "role": UserRole.DOCTOR,
-            "status": UserStatus.PENDING,
+            "status": UserStatus.PENDING_APPROVAL,
             "two_factor": {"enabled": False, "secret": None},
             "created_at": now,
             "updated_at": now
@@ -188,8 +188,8 @@ async def run_seed():
             "first_name": "Mateo",
             "last_name": "García",
             "email": "garcia@hospital.com",
-            "phone": "+56 9 8765 4321",
-            "identification_number": "12345678-9"
+            "phone": "+58 412 8765432",
+            "identification_number": "V-12345678"
         },
         "professional_metadata": {
             "medical_license": "LIC-98765-MED",
@@ -211,12 +211,12 @@ async def run_seed():
             "first_name": "Ignacio",
             "last_name": "Valenzuela",
             "email": "valenzuela@ojos.com",
-            "phone": "+56 9 6543 2109",
-            "identification_number": "15.999.888-7"
+            "phone": "+58 416 6543210",
+            "identification_number": "V-15999888"
         },
         "professional_metadata": {
             "corporate_name": "Clínica de Ojos Especializada",
-            "tax_id": "76.543.210-9",
+            "tax_id": "J-76543210-9",
             "client_type": ClientType.CLINICA
         },
         "verification_documents": [
@@ -247,7 +247,7 @@ async def run_seed():
         "last_name": "López",
         "specialty": "Cardiología Infantil",
         "contact": {
-            "phone": "+56 9 1234 5678",
+            "phone": "+58 412 1234567",
             "office_location": "Pabellón A, Oficina 204"
         },
         "active_patients_count": 1,
@@ -268,7 +268,7 @@ async def run_seed():
             "last_name": "González",
             "specialty": "Urgenciólogo",
             "contact": {
-                "phone": "+56 9 2233 4455",
+                "phone": "+58 424 2233445",
                 "office_location": "Urgencias Box 4"
             },
             "active_patients_count": 0,
@@ -286,7 +286,7 @@ async def run_seed():
             "last_name": "Martínez",
             "specialty": "Medicina General",
             "contact": {
-                "phone": "+56 9 3344 5566",
+                "phone": "+58 416 3344556",
                 "office_location": "Edificio B, Oficina 102"
             },
             "active_patients_count": 0,
@@ -304,7 +304,7 @@ async def run_seed():
             "last_name": "Ramírez",
             "specialty": "Pediatría",
             "contact": {
-                "phone": "+56 9 4455 6677",
+                "phone": "+58 412 4455667",
                 "office_location": "Edificio C, Oficina 301"
             },
             "active_patients_count": 0,
@@ -326,10 +326,10 @@ async def run_seed():
         "status": "APPROVED",
         "client_type": ClientType.CLINICA,
         "corporate_name": "Clínica del Norte S.A.",
-        "tax_id": "99.888.777-6",
+        "tax_id": "J-99888777-6",
         "contact_info": {
-            "phone": "+56 2 2999 8888",
-            "address": "Av. Apoquindo 4500, Las Condes",
+            "phone": "+58 212 2999888",
+            "address": "Av. Francisco de Miranda, Chacao, Caracas",
             "emergency_email": "urgencias@central.com"
         },
         "ui_preferences": {"view_type": "LIST"},
@@ -351,10 +351,10 @@ async def run_seed():
             "status": "APPROVED",
             "client_type": ClientType.CLINICA,
             "corporate_name": "Clínica de Especialidades del Sur S.A.",
-            "tax_id": "77.666.555-4",
+            "tax_id": "J-77666555-4",
             "contact_info": {
-                "phone": "+56 6 1234 5678",
-                "address": "Av. Independencia 1024, Concepción",
+                "phone": "+58 261 1234567",
+                "address": "Av. Bella Vista, Maracaibo",
                 "emergency_email": "urgencias@clinicasur.com"
             },
             "ui_preferences": {"view_type": "CARDS"},
@@ -373,10 +373,10 @@ async def run_seed():
             "status": "APPROVED",
             "client_type": ClientType.FAMILIAR,
             "corporate_name": "Hogar Familiar Don Bosco",
-            "tax_id": "88.777.666-5",
+            "tax_id": "J-88777666-5",
             "contact_info": {
-                "phone": "+56 2 2222 3333",
-                "address": "Calle San Alberto 430, Santiago",
+                "phone": "+58 212 2222333",
+                "address": "Calle Carabobo, Valencia",
                 "emergency_email": "soporte@donbosco.com"
             },
             "ui_preferences": {"view_type": "CARDS"},
@@ -395,10 +395,10 @@ async def run_seed():
             "status": "APPROVED",
             "client_type": ClientType.CLINICA,
             "corporate_name": "Centro Médico Las Condes",
-            "tax_id": "99.000.111-2",
+            "tax_id": "J-99000111-2",
             "contact_info": {
-                "phone": "+56 2 2888 9999",
-                "address": "Av. Vitacura 5400, Vitacura",
+                "phone": "+58 212 2888999",
+                "address": "Av. Las Delicias, Maracay",
                 "emergency_email": "urgencias@medicacondes.com"
             },
             "ui_preferences": {"view_type": "LIST"},
@@ -490,7 +490,7 @@ async def run_seed():
         "is_active": True,
         "ui_preferences": {"view_type": "CARDS"},
         "medical_record_id": "MG-76342",
-        "national_id": "11.222.333-4",
+        "national_id": "V-11222333",
         "first_name": "Juan",
         "last_name": "Pérez",
         "assigned_doctor_id": doctor_profile_id,
@@ -717,7 +717,7 @@ Los cobros se realizan de forma anticipada los **primeros 5 días hábiles** de 
 
 ## Medios de Pago Aceptados
 * **Transferencia Bancaria Directa**
-* **Tarjeta de Crédito / Débito (Webpay)**
+* **Pago Móvil / Transferencia Bancaria**
 
 Si presenta alertas contractuales en la consola de clientes, su servicio de monitoreo no se suspenderá inmediatamente, sino que otorgará una prórroga de 10 días antes de suspender temporalmente las credenciales del paciente.
 """,
@@ -742,9 +742,9 @@ Si presenta alertas contractuales en la consola de clientes, su servicio de moni
                 "first_name": "Administrador",
                 "last_name": "AURA",
                 "email": "admin@telemonitor.com",
-                "phone": "+56 9 1111 2222",
-                "address": "Av. Apoquindo 4400, Las Condes, Santiago",
-                "identification_number": "9.999.999-9"
+                "phone": "+58 412 1112222",
+                "address": "Av. Francisco de Miranda, Chacao, Caracas",
+                "identification_number": "V-9999999"
             },
             "role_specific_data": {},
             "updated_at": now
@@ -757,12 +757,12 @@ Si presenta alertas contractuales en la consola de clientes, su servicio de moni
                 "first_name": "Sofía",
                 "last_name": "López",
                 "email": "lopez@clinic.com",
-                "phone": "+56 9 3333 4444",
-                "address": "Providencia 890, Consultorio 3A, Santiago",
-                "identification_number": "14.234.567-8"
+                "phone": "+58 414 3333444",
+                "address": "Av. Andrés Bello, Consultorio 3A, Caracas",
+                "identification_number": "V-14234567"
             },
             "role_specific_data": {
-                "medical_license": "LIC-88122-CL",
+                "medical_license": "LIC-88122-VE",
                 "specialty": "Cardiología Infantil",
                 "office_location": "Consultorio 3A, Piso 3"
             },

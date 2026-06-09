@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Building2, Home, Phone, MapPin, Mail, 
-  Trash2, Users, FileText, CheckCircle, AlertTriangle, AlertCircle
+  Trash2, Users, FileText, CheckCircle, AlertTriangle, AlertCircle, Plus, X
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';
 
 export const ClientDetailView: React.FC = () => {
+  const { user } = useAuthStore();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
@@ -16,6 +18,48 @@ export const ClientDetailView: React.FC = () => {
   const [healthPercent, setHealthPercent] = useState<number>(100);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Estados de asignación de pacientes
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [allPatients, setAllPatients] = useState<any[]>([]);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  // Cargar todos los pacientes disponibles (que no pertenezcan ya a este cliente)
+  useEffect(() => {
+    if (isAssignModalOpen) {
+      const fetchAllPatients = async () => {
+        try {
+          const response = await api.get('/patients', { params: { limit: 100 } });
+          const filtered = (response.data.patients || []).filter(
+            (p: any) => p.client_id !== id
+          );
+          setAllPatients(filtered);
+        } catch (err) {
+          toast.error('Error al obtener la nómina de pacientes.');
+        }
+      };
+      fetchAllPatients();
+    }
+  }, [isAssignModalOpen, id]);
+
+  const handleAssignPatient = async () => {
+    if (!selectedPatientId) return;
+    setIsAssigning(true);
+    try {
+      await api.put(`/patients/${selectedPatientId}`, {
+        client_id: id
+      });
+      toast.success('Paciente vinculado con éxito.');
+      setIsAssignModalOpen(false);
+      setSelectedPatientId('');
+      fetchClientDetail();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Error al vincular paciente.');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
 
   const fetchClientDetail = async () => {
     setIsLoading(true);
@@ -101,9 +145,10 @@ export const ClientDetailView: React.FC = () => {
   const isInstitution = client.client_type === 'CLINICA';
 
   return (
-    <div className={`space-y-6 font-mono transition-opacity duration-350 ${
-      !client.is_active ? 'opacity-65' : ''
-    }`}>
+    <>
+      <div className={`space-y-6 font-mono transition-opacity duration-350 ${
+        !client.is_active ? 'opacity-65' : ''
+      }`}>
       
       {/* WARNING LOCKOUT BANNER */}
       {!client.is_active && (
@@ -196,10 +241,21 @@ export const ClientDetailView: React.FC = () => {
 
           {/* Panel Sublista Tabular de Pacientes Fondeados */}
           <div className="bg-glass rounded-3xl border border-[#1E2640] p-6">
-            <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest border-b border-[#1E2640] pb-3 mb-4 flex items-center space-x-2">
-              <Users className="h-4 w-4 text-[#D4AF37]" />
-              <span>Nómina de Pacientes Asociados ({client.patients?.length ?? 0})</span>
-            </h3>
+            <div className="flex justify-between items-center border-b border-[#1E2640] pb-3 mb-4">
+              <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest flex items-center space-x-2">
+                <Users className="h-4 w-4 text-[#D4AF37]" />
+                <span>Nómina de Pacientes Asociados ({client.patients?.length ?? 0})</span>
+              </h3>
+              {client.is_active && user?.role === 'ADMIN' && (
+                <button
+                  onClick={() => setIsAssignModalOpen(true)}
+                  className="px-3 py-1.5 bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black border border-[#D4AF37]/25 text-[#D4AF37] font-extrabold text-[10px] rounded-lg transition-all uppercase flex items-center space-x-1"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Asignar Paciente</span>
+                </button>
+              )}
+            </div>
 
             {(!client.patients || client.patients.length === 0) ? (
               <div className="p-8 text-center text-xs text-slate-500 font-semibold uppercase">
@@ -358,6 +414,70 @@ export const ClientDetailView: React.FC = () => {
       </div>
 
     </div>
+
+    {/* MODAL ASIGNAR PACIENTE */}
+    {isAssignModalOpen && (
+      <div className="fixed inset-0 bg-[#0B0F19]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="bg-[#0F1420] border border-[#1E2640] rounded-3xl p-6 w-full max-w-md text-xs flex flex-col justify-between shadow-2xl relative font-mono animate-in fade-in zoom-in-95 duration-200">
+          
+          <div className="border-b border-[#1E2640]/60 pb-3 mb-5 flex justify-between items-center">
+            <div>
+              <strong className="text-sm text-slate-200 font-extrabold block">
+                Vincular Paciente
+              </strong>
+              <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider block mt-1">
+                Asignación a Cobertura Comercial
+              </span>
+            </div>
+            <button 
+              onClick={() => setIsAssignModalOpen(false)}
+              className="text-slate-500 hover:text-slate-200"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+              Seleccione un paciente de la nómina global para vincularlo a este contrato financiero corporativo.
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-slate-500 font-bold uppercase">Paciente Disponible:</label>
+              <select
+                value={selectedPatientId}
+                onChange={(e) => setSelectedPatientId(e.target.value)}
+                className="w-full bg-[#0A0D15] border border-[#1E2640] rounded-xl px-3 py-2 outline-none text-slate-300 font-sans focus:border-[#D4AF37] transition-all"
+              >
+                <option value="">-- SELECCIONE UN PACIENTE --</option>
+                {allPatients.map(p => (
+                  <option key={p._id} value={p._id}>
+                    {p.first_name} {p.last_name} ({p.medical_record_id})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center space-x-3 pt-4">
+              <button
+                onClick={handleAssignPatient}
+                disabled={isAssigning || !selectedPatientId}
+                className="flex-1 py-2.5 bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-black font-extrabold text-xs rounded-xl transition-all uppercase tracking-wider text-center disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isAssigning ? 'Vinculando...' : 'Vincular Paciente'}
+              </button>
+              <button
+                onClick={() => setIsAssignModalOpen(false)}
+                className="flex-1 py-2.5 bg-black/25 text-slate-400 border border-[#1E2640] hover:text-slate-200 font-extrabold text-xs rounded-xl transition-all uppercase tracking-wider text-center"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 export default ClientDetailView;

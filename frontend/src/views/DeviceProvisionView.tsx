@@ -314,8 +314,8 @@ export const DeviceProvisionView: React.FC = () => {
                         <span className="text-[9px] text-slate-500 font-bold block uppercase">Solicitado en Fecha</span>
                         <span className="text-slate-400 font-semibold block mt-0.5">
                           {selectedDevice.approval_details?.submitted_at
-                            ? new Date(selectedDevice.approval_details.submitted_at).toLocaleString()
-                            : new Date().toLocaleString()}
+                            ? new Date(selectedDevice.approval_details.submitted_at).toLocaleString('es-VE', { timeZone: 'America/Caracas' })
+                            : new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' })}
                         </span>
                       </div>
                     </div>

@@ -6,7 +6,7 @@ import csv
 import json
 import logging
 from io import StringIO, BytesIO
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -56,6 +56,9 @@ class PatientUpdate(BaseModel):
     is_active: Optional[bool] = None
     clinical_thresholds: Optional[ClinicalThresholdsUpdate] = None
     medical_history_summary: Optional[MedicalHistorySummaryUpdate] = None
+    assigned_doctor_id: Optional[str] = None
+    assigned_device_id: Optional[str] = None
+    client_id: Optional[str] = None
 
 
 # --- RUTAS ---
@@ -188,11 +191,47 @@ async def update_patient(
         update_data["is_active"] = req.is_active
     
     if req.clinical_thresholds is not None:
+        if current_user.role == UserRole.CLIENT:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Los clientes no tienen permisos para modificar umbrales clínicos."
+            )
         # En MongoDB los guardamos en su formato embebido
         update_data["clinical_thresholds"] = req.clinical_thresholds.model_dump()
         
     if req.medical_history_summary is not None:
         update_data["medical_history_summary"] = req.medical_history_summary.model_dump()
+
+    if req.assigned_doctor_id is not None:
+        if current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo los administradores pueden asignar médicos.")
+        update_data["assigned_doctor_id"] = ObjectId(req.assigned_doctor_id) if req.assigned_doctor_id else None
+
+    if req.client_id is not None:
+        if current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo los administradores pueden asignar clientes.")
+        update_data["client_id"] = ObjectId(req.client_id) if req.client_id else None
+
+    if req.assigned_device_id is not None:
+        if current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo los administradores pueden asignar dispositivos.")
+        old_device_id = patient.get("assigned_device_id")
+        new_device_id = ObjectId(req.assigned_device_id) if req.assigned_device_id else None
+        
+        if old_device_id != new_device_id:
+            # 1. Liberar el dispositivo anterior
+            if old_device_id:
+                await db_service.db.devices.update_one(
+                    {"_id": old_device_id},
+                    {"$set": {"operational_status": "AVAILABLE"}}
+                )
+            # 2. Reservar el nuevo dispositivo
+            if new_device_id:
+                await db_service.db.devices.update_one(
+                    {"_id": new_device_id},
+                    {"$set": {"operational_status": "ASSIGNED"}}
+                )
+            update_data["assigned_device_id"] = new_device_id
 
     if not update_data:
         raise HTTPException(
@@ -226,15 +265,26 @@ async def update_patient(
 @router.get("/{id}/vitals-history")
 async def get_vitals_history(
     id: str,
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=1000),
+    start_time: Optional[str] = Query(None, description="ISO 8601 start time"),
+    end_time: Optional[str] = Query(None, description="ISO 8601 end time"),
     current_user: UserResponse = Depends(get_current_user)
 ):
     """
     Retorna el historial cronológico de telemetría de vital_signs_history.
+    Permite filtrar por rango de tiempo explícito (start_time, end_time).
     """
-    cursor = db_service.db.vital_signs_history.find(
-        {"patient_id": ObjectId(id)}
-    ).sort("timestamp", -1).limit(limit)
+    query: dict = {"patient_id": ObjectId(id)}
+    
+    if start_time or end_time:
+        time_query = {}
+        if start_time:
+            time_query["$gte"] = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+        if end_time:
+            time_query["$lte"] = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+        query["timestamp"] = time_query
+
+    cursor = db_service.db.vital_signs_history.find(query).sort("timestamp", -1).limit(limit)
 
     history = []
     async for doc in cursor:
@@ -282,7 +332,7 @@ async def resolve_alert(
     Permite a un médico resolver/reconocer una alerta crítica activa.
     Actualiza el documento en `alerts` y recalcula si el paciente tiene más alertas activas en paralelo.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     # 1. Resolver la alerta en MongoDB
     res = await db_service.db.alerts.find_one_and_update(
@@ -345,7 +395,7 @@ async def export_patient_data(
         history.append(doc)
 
     patient_name = f"{patient['first_name']} {patient['last_name']}"
-    filename_base = f"Reporte_Clinico_{patient_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}"
+    filename_base = f"Reporte_Clinico_{patient_name.replace(' ', '_')}_{datetime.now(timezone(timedelta(hours=-4))).strftime('%Y%m%d')}"
 
     # 1. EXPORTACIÓN EN FORMATO JSON
     if format.lower() == "json":
@@ -362,7 +412,7 @@ async def export_patient_data(
             "patient_id": id,
             "patient_name": patient_name,
             "medical_record_id": patient.get("medical_record_id"),
-            "exported_at": datetime.utcnow().isoformat(),
+            "exported_at": datetime.now(timezone.utc).isoformat(),
             "vital_signs_history": json_data
         }
         
@@ -458,7 +508,7 @@ async def export_patient_data(
             [Paragraph("Paciente:", body_bold), Paragraph(patient_name, body_style),
              Paragraph("Expediente Médico:", body_bold), Paragraph(patient.get("medical_record_id", "N/A"), body_style)],
             [Paragraph("Identificación:", body_bold), Paragraph(patient.get("national_id", "N/A"), body_style),
-             Paragraph("Fecha Exportación:", body_bold), Paragraph(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), body_style)],
+             Paragraph("Fecha Exportación:", body_bold), Paragraph(datetime.now(timezone(timedelta(hours=-4))).strftime("%Y-%m-%d %H:%M:%S"), body_style)],
             [Paragraph("Grupo Sanguíneo:", body_bold), Paragraph(patient.get("medical_history_summary", {}).get("blood_type", "O+"), body_style),
              Paragraph("Estado de Cuenta:", body_bold), Paragraph("Activo" if patient.get("is_active") else "Inactivo", body_style)]
         ]

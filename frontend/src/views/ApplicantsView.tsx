@@ -163,7 +163,7 @@ export const ApplicantsView: React.FC = () => {
                           {personal.first_name} {personal.last_name}
                         </h4>
                         <span className="text-[9px] text-slate-500 font-mono font-bold uppercase block mt-0.5">
-                          RUT ID: {personal.identification_number}
+                          Cédula/RIF ID: {personal.identification_number}
                         </span>
                       </div>
 
@@ -195,7 +195,7 @@ export const ApplicantsView: React.FC = () => {
                   <div className="flex justify-between items-center border-t border-[#1E2640]/50 pt-4 mt-6">
                     <span className="text-[9px] text-slate-500 font-mono font-bold flex items-center space-x-1">
                       <Clock className="h-3 w-3" />
-                      <span>{new Date(applicant.submitted_at).toLocaleDateString()}</span>
+                      <span>{new Date(applicant.submitted_at).toLocaleDateString('es-VE', { timeZone: 'America/Caracas' })}</span>
                     </span>
                     
                     <button

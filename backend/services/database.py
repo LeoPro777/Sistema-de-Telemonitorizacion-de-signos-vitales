@@ -21,7 +21,7 @@ class DatabaseService:
         """
         # MongoDB
         logger.info(f"Conectando a MongoDB en: {settings.MONGO_URI}")
-        self.mongo_client = AsyncIOMotorClient(settings.MONGO_URI)
+        self.mongo_client = AsyncIOMotorClient(settings.MONGO_URI, tz_aware=True)
         self.db = self.mongo_client[settings.MONGO_DB]
         
         # Redis

@@ -3,7 +3,7 @@ clients.py — Rutas REST de Gestión de Clientes (Módulo 7: Clínicas o Famili
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -203,7 +203,7 @@ async def update_client(
         new_status = UserStatus.ACTIVE if req.is_active else UserStatus.SUSPENDED
         await db_service.db.users.update_one(
             {"_id": ObjectId(client["user_id"])},
-            {"$set": {"status": new_status, "updated_at": datetime.utcnow()}}
+            {"$set": {"status": new_status, "updated_at": datetime.now(timezone.utc)}}
         )
         logger.info(f"Sincronización del cliente {id} a estado de usuario: {new_status}")
 

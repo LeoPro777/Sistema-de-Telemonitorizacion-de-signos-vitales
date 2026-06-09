@@ -2,7 +2,7 @@
 auth.py — Rutas de Autenticación del Sistema mediante Google OAuth2 y Cookies de Sesión
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status, Cookie, Response, Request
@@ -119,7 +119,7 @@ async def get_current_user(session_id: Optional[str] = Cookie(None)) -> UserResp
             detail="Sesión no encontrada en base de datos.",
         )
     
-    if session_doc["expires_at"] < datetime.utcnow():
+    if session_doc["expires_at"] < datetime.now(timezone.utc):
         logger.warning(f"[get_current_user] Sesión {actual_session_id} ha expirado. Expira en: {session_doc['expires_at']}")
         # Eliminar sesión expirada
         await db_service.db.auth_sessions.delete_one({"session_id": actual_session_id})
@@ -193,7 +193,7 @@ async def google_login(req: GoogleLoginRequest, response: Response):
             detail="El token de Google no contiene información de identidad suficiente."
         )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Buscar usuario en DB por email o google_id
     user_doc = await db_service.db.users.find_one({
@@ -339,7 +339,7 @@ async def google_callback(request: Request, code: str, response: Response):
     if not email or not google_id:
         return RedirectResponse(url="/login?error=insufficient_info")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     # 3. Buscar o crear el usuario en MongoDB
     user_doc = await db_service.db.users.find_one({
@@ -426,7 +426,7 @@ async def onboarding(req: OnboardingRequest, current_user: UserResponse = Depend
             detail="El onboarding ya ha sido completado por este usuario."
         )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # 1. Crear el registro en applicants en estado PENDING_APPROVAL
     applicant_doc = {

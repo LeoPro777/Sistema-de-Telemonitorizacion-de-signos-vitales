@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { Heart, ArrowLeft, ArrowRight, UploadCloud, CheckCircle, FileText } from 'lucide-react';
+import { Heart, ArrowLeft, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const RegistrationStepperView: React.FC = () => {
@@ -22,7 +22,7 @@ export const RegistrationStepperView: React.FC = () => {
   // Paso 1: Datos Comunes & Cuenta
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
-  const [email, setEmail] = useState(user?.email || '');
+  const email = user?.email || '';
   const [phone, setPhone] = useState('');
   const [nationalId, setNationalId] = useState('');
 
@@ -38,10 +38,6 @@ export const RegistrationStepperView: React.FC = () => {
   // Paciente
   const [bloodType, setBloodType] = useState('O+');
   const [notes, setNotes] = useState('');
-
-  // Paso 3: Documentos (Simulado Drag & Drop)
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; size: string; status: 'uploading' | 'completed' }>>([]);
-  const [dragActive, setDragActive] = useState(false);
 
   const handleNextStep = () => {
     if (currentStep === 1) {
@@ -67,46 +63,6 @@ export const RegistrationStepperView: React.FC = () => {
 
   const handlePrevStep = () => {
     setCurrentStep((prev) => prev - 1);
-  };
-
-  // Drag and Drop simulation
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      addSimulatedFile(e.dataTransfer.files[0].name);
-    }
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      addSimulatedFile(e.target.files[0].name);
-    }
-  };
-
-  const addSimulatedFile = (fileName: string) => {
-    const newFile = { name: fileName, size: '2.4 MB', status: 'uploading' as const };
-    setUploadedFiles((prev) => [...prev, newFile]);
-    
-    // Simular progreso de subida
-    setTimeout(() => {
-      setUploadedFiles((prev) => 
-        prev.map((f) => f.name === fileName ? { ...f, status: 'completed' } : f)
-      );
-      toast.success(`Archivo "${fileName}" cargado correctamente.`);
-    }, 1500);
   };
 
   const handleSubmit = async () => {
@@ -247,7 +203,7 @@ export const RegistrationStepperView: React.FC = () => {
                     type="text"
                     value={nationalId}
                     onChange={(e) => setNationalId(e.target.value)}
-                    placeholder="ej: 12345678-9"
+                    placeholder="ej: V-12345678"
                     className="w-full px-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-sm"
                     required
                   />
@@ -258,7 +214,7 @@ export const RegistrationStepperView: React.FC = () => {
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="ej: +56 9 1234 5678"
+                    placeholder="ej: +58 412 1234567"
                     className="w-full px-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-sm"
                     required
                   />
@@ -339,12 +295,12 @@ export const RegistrationStepperView: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">ID Fiscal (Tax ID)</label>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">ID Fiscal (Tax ID) / RIF</label>
                       <input
                         type="text"
                         value={taxId}
                         onChange={(e) => setTaxId(e.target.value)}
-                        placeholder="ej: 99.888.777-K"
+                        placeholder="ej: J-99888777-9"
                         className="w-full px-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-sm"
                         required
                       />

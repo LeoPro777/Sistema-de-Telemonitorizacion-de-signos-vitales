@@ -166,7 +166,7 @@ export const DeviceDetailView: React.FC = () => {
                   <span className="text-[10px] text-slate-500 font-bold block uppercase">Último Latido (Ping)</span>
                   <span className="text-slate-300 text-xs font-semibold flex items-center space-x-1.5 mt-0.5">
                     <Clock className="h-3.5 w-3.5 text-slate-500" />
-                    <span>{new Date(device.hardware_metrics.last_ping_at).toLocaleString()}</span>
+                    <span>{new Date(device.hardware_metrics.last_ping_at).toLocaleString('es-VE', { timeZone: 'America/Caracas' })}</span>
                   </span>
                 </div>
                 <div>
@@ -250,7 +250,7 @@ export const DeviceDetailView: React.FC = () => {
                       </div>
                     </div>
                     <span className="text-[10px] text-slate-500 font-bold">
-                      {new Date(alert.created_at).toLocaleTimeString()}
+                      {new Date(alert.created_at).toLocaleTimeString('es-VE', { timeZone: 'America/Caracas' })}
                     </span>
                   </div>
                 ))}

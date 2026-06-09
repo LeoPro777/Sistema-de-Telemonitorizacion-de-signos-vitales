@@ -6,7 +6,7 @@ Includes real-time clinical threshold evaluation and automatic alerts triggering
 import json
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Set, Optional
 from bson import ObjectId
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status
@@ -16,6 +16,7 @@ from backend.services.database import db_service
 from backend.services.auth_utils import unsign_session_id
 from backend.models.user import TelemetryStatus
 from backend.models.applicant import ApprovalStatus
+from backend.config import settings
 
 logger = logging.getLogger("app.vitals")
 router = APIRouter(prefix="", tags=["Monitoreo en Tiempo Real (M3 & M4)"])
@@ -55,6 +56,9 @@ class ConnectionManager:
                 self.active_connections[patient_id].discard(ws)
 
 manager = ConnectionManager()
+
+# Caché en memoria para limitar la ingesta a 1 dato cada 10 segundos por paciente
+last_telemetry_time: Dict[str, datetime] = {}
 
 # --- EVALUACIÓN DE UMBRALES CLÍNICOS ---
 def evaluate_metrics(telemetry: dict, thresholds: dict) -> tuple:
@@ -155,7 +159,7 @@ async def ws_vitals_endpoint(websocket: WebSocket, patient_id: str):
         return
         
     session_doc = await db_service.db.auth_sessions.find_one({"session_id": actual_session_id})
-    if not session_doc or session_doc["expires_at"] < datetime.utcnow():
+    if not session_doc or session_doc["expires_at"] < datetime.now(timezone.utc):
         await websocket.accept()
         await websocket.send_json({"error": "Sesión expirada o no encontrada."})
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
@@ -197,6 +201,107 @@ async def ws_vitals_endpoint(websocket: WebSocket, patient_id: str):
             # Omitimos o procesamos mensajes de ping
             if data == "ping":
                 await websocket.send_text("pong")
+                continue
+            
+            try:
+                payload = json.loads(data)
+                if isinstance(payload, dict) and "heart_rate" in payload and "spo2" in payload and "temperature" in payload:
+                    hr = int(payload["heart_rate"])
+                    spo2 = int(payload["spo2"])
+                    temp = float(payload["temperature"])
+                    telemetry_data = {
+                        "heart_rate": hr,
+                        "spo2": spo2,
+                        "temperature": temp
+                    }
+                    
+                    now = datetime.now(timezone.utc)
+                    last_time = last_telemetry_time.get(patient_id)
+                    rate_limit_seconds = 10 if settings.ENVIRONMENT == "production" else 0.0
+                    if last_time and (now - last_time).total_seconds() < rate_limit_seconds:
+                        # Rate limit: max 1 per 10 seconds in prod, 0 seconds in dev/test
+                        continue
+                        
+                    last_telemetry_time[patient_id] = now
+                    
+                    patient = await db_service.db.patients.find_one({"_id": ObjectId(patient_id)})
+                    if patient:
+                        thresholds = patient.get("clinical_thresholds", {
+                            "heart_rate": {"min_bpm": 60, "max_bpm": 100},
+                            "spo2": {"critical_min_percent": 92},
+                            "temperature": {"min_celsius": 35.5, "max_celsius": 37.5}
+                        })
+                        
+                        overall_status, last_telemetry_cache, alerts_to_create = evaluate_metrics(telemetry_data, thresholds)
+                        
+                        # Persistir lectura en Timeseries de vital_signs_history
+                        history_doc = {
+                            "patient_id": ObjectId(patient_id),
+                            "timestamp": now,
+                            "telemetry": telemetry_data
+                        }
+                        await db_service.db.vital_signs_history.insert_one(history_doc)
+                        
+                        # Actualizar cache y estado de alerta en el paciente
+                        has_active_alert = len(alerts_to_create) > 0
+                        await db_service.db.patients.update_one(
+                            {"_id": ObjectId(patient_id)},
+                            {
+                                "$set": {
+                                    "last_telemetry_cache": last_telemetry_cache,
+                                    "has_active_alert": has_active_alert
+                                }
+                            }
+                        )
+                        
+                        # Crear alertas en la colección alerts
+                        created_alerts = []
+                        for alert in alerts_to_create:
+                            alert_doc = {
+                                "_id": ObjectId(),
+                                "patient_id": ObjectId(patient_id),
+                                "device_id": patient.get("assigned_device_id"),
+                                "alert_type": alert["type"],
+                                "severity": "CRITICAL",
+                                "description": alert["desc"],
+                                "trigger_value": alert["value"],
+                                "status": "ACTIVE",
+                                "created_at": now,
+                                "resolved_at": None,
+                                "resolved_by": None
+                            }
+                            await db_service.db.alerts.insert_one(alert_doc)
+                            
+                            alert_doc["_id"] = str(alert_doc["_id"])
+                            alert_doc["patient_id"] = str(alert_doc["patient_id"])
+                            if alert_doc["device_id"]:
+                                alert_doc["device_id"] = str(alert_doc["device_id"])
+                            if isinstance(alert_doc["created_at"], datetime):
+                                alert_doc["created_at"] = alert_doc["created_at"].isoformat()
+                            created_alerts.append(alert_doc)
+                        
+                        # Preparar paquete de transmisión
+                        stream_payload = {
+                            "patient_id": patient_id,
+                            "timestamp": now.isoformat(),
+                            "telemetry": telemetry_data,
+                            "status": overall_status,
+                            "cache": last_telemetry_cache,
+                            "new_alerts": created_alerts
+                        }
+                        
+                        # Publicar en Redis Pub/Sub
+                        if db_service.redis:
+                            try:
+                                channel_name = f"channel:vitals:{patient_id}"
+                                await db_service.redis.publish(channel_name, json.dumps(stream_payload))
+                            except Exception as e:
+                                logger.error(f"Error publicando en Redis: {e}")
+                                
+                        # También enviar por fallback en memoria local
+                        await manager.broadcast_to_patient(patient_id, stream_payload)
+            except Exception as e:
+                logger.error(f"Error procesando mensaje WebSocket del cliente para paciente {patient_id}: {e}")
 
     except WebSocketDisconnect:
         manager.disconnect(patient_id, websocket)
@@ -225,7 +330,16 @@ async def simulate_vital_signs(patient_id: str, payload: TelemetryPayload):
     Simula el envío de una ráfaga biométrica desde el dispositivo IoT del paciente.
     Persiste en MongoDB (Time-Series) y distribuye por Redis Pub/Sub y WebSockets.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
+    last_time = last_telemetry_time.get(patient_id)
+    rate_limit_seconds = 10 if settings.ENVIRONMENT == "production" else 0.0
+    if rate_limit_seconds > 0.0:
+        if last_time and (now - last_time).total_seconds() < rate_limit_seconds:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Rate limit exceeded. The physical device limitation allows 1 data point per {rate_limit_seconds} seconds."
+            )
+    last_telemetry_time[patient_id] = now
     
     # 1. Obtener al paciente para verificar umbrales clínicos y dispositivo asignado
     patient = await db_service.db.patients.find_one({"_id": ObjectId(patient_id)})

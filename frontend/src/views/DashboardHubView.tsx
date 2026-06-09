@@ -57,7 +57,7 @@ export const DashboardHubView: React.FC = () => {
       const kpiRes = await api.get('/dashboard/kpis');
       setKpis(kpiRes.data.cached_metrics);
       
-      setLastUpdate(new Date().toLocaleTimeString());
+      setLastUpdate(new Date().toLocaleTimeString('es-VE', { timeZone: 'America/Caracas' }));
       setIsLoading(false);
     } catch (err: any) {
       toast.error('Error al cargar la consola del Dashboard');

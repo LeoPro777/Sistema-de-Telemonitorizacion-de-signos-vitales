@@ -2,7 +2,7 @@
 support.py — Rutas para el Centro de Ayuda y Tickets de Soporte
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import List, Optional
@@ -134,7 +134,7 @@ async def vote_article(
     
     res = await db_service.db.help_articles.find_one_and_update(
         {"_id": ObjectId(id)},
-        {"$inc": {field: 1}, "$set": {"updated_at": datetime.utcnow()}},
+        {"$inc": {field: 1}, "$set": {"updated_at": datetime.now(timezone.utc)}},
         return_document=True
     )
 
@@ -155,7 +155,7 @@ async def create_support_ticket(
     """
     Crea y registra una nueva solicitud de soporte técnico en la colección support_tickets.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     ticket_doc = {
         "user_id": ObjectId(current_user.id),
         "user_role_snapshot": current_user.role,

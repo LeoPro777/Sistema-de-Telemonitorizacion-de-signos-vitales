@@ -263,7 +263,7 @@ export const AuditLogsView: React.FC = () => {
                   <tr key={log._id} className="hover:bg-[#1E2640]/20 transition-all">
                     {/* Col 1: Sello de tiempo */}
                     <td className="py-4 px-6 text-slate-400 whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleString()}
+                      {new Date(log.timestamp).toLocaleString('es-VE', { timeZone: 'America/Caracas' })}
                     </td>
                     
                     {/* Col 2: Nivel */}

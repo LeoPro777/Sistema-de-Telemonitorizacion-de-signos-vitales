@@ -10,6 +10,7 @@ export const SettingsView: React.FC = () => {
   // Configuración General
   const [language, setLanguage] = useState<string>('ES');
   const [theme, setTheme] = useState<string>('premium_dark');
+  const [timeFormat, setTimeFormat] = useState<string>('24h');
   const [emailEnabled, setEmailEnabled] = useState<boolean>(true);
   const [pushEnabled, setPushEnabled] = useState<boolean>(true);
   
@@ -39,6 +40,10 @@ export const SettingsView: React.FC = () => {
       if (response.data.theme_preference) {
         setTheme(response.data.theme_preference);
       }
+      if (response.data.time_format) {
+        setTimeFormat(response.data.time_format);
+        localStorage.setItem('aura_time_format', response.data.time_format);
+      }
     } catch (err) {
       // Fallback
     }
@@ -55,7 +60,9 @@ export const SettingsView: React.FC = () => {
       await api.put('/dashboard/config', {
         theme_preference: theme,
         language_preference: language,
+        time_format: timeFormat
       });
+      localStorage.setItem('aura_time_format', timeFormat);
       toast.success('Preferencias de interfaz guardadas con éxito.');
     } catch (err) {
       // Mock success for offline/bypass exploration
@@ -119,7 +126,7 @@ export const SettingsView: React.FC = () => {
                 onChange={(e) => setLanguage(e.target.value)}
                 className="w-full p-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-slate-200 cursor-pointer"
               >
-                <option value="ES">Español (Chile)</option>
+                <option value="ES">Español (Venezuela)</option>
                 <option value="EN">English (US)</option>
               </select>
             </div>
@@ -133,6 +140,18 @@ export const SettingsView: React.FC = () => {
               >
                 <option value="premium_dark">AURA Premium Dark (Predeterminado)</option>
                 <option value="light">Classic Light (Contraste Clínico)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-500 font-bold uppercase block">Formato de Hora (Ejes / Alertas)</label>
+              <select
+                value={timeFormat}
+                onChange={(e) => setTimeFormat(e.target.value)}
+                className="w-full p-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-slate-200 cursor-pointer"
+              >
+                <option value="24h">24 Horas (Militar / Clínico)</option>
+                <option value="12h">12 Horas (AM / PM)</option>
               </select>
             </div>
 

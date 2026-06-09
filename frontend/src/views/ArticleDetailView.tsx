@@ -204,7 +204,7 @@ export const ArticleDetailView: React.FC = () => {
             </span>
             <div className="flex items-center space-x-1">
               <Calendar className="h-3 w-3" />
-              <span>Actualizado: {new Date(article.updated_at).toLocaleDateString()}</span>
+              <span>Actualizado: {new Date(article.updated_at).toLocaleDateString('es-VE', { timeZone: 'America/Caracas' })}</span>
             </div>
             <div className="flex items-center space-x-1">
               {article.format_type === 'FAQ' ? (

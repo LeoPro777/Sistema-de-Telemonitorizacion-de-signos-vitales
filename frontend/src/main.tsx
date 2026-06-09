@@ -27,7 +27,8 @@ import {
   ProfileEditView,
   SettingsView,
   AuditLogsView,
-  ReportsView
+  ReportsView,
+  SandboxLab
 } from './views'
 import { useAuthStore } from './store/authStore'
 import './index.css'
@@ -145,6 +146,9 @@ const App: React.FC = () => {
           {/* Rutas reales del Módulo 10 */}
           <Route path="profile" element={<ProfileView />} />
           <Route path="profile/edit" element={<ProfileEditView />} />
+
+          {/* Rutas reales del Módulo 14 */}
+          <Route path="sandbox" element={<SandboxLab />} />
         </Route>
 
         {/* Fallback */}

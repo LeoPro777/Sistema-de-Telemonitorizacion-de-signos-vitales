@@ -3,7 +3,7 @@ doctors.py — Rutas REST de Gestión de Doctores (Módulo 6: Gestión de Doctor
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -205,7 +205,7 @@ async def update_doctor(
         new_user_status = UserStatus.ACTIVE if req.is_active else UserStatus.SUSPENDED
         await db_service.db.users.update_one(
             {"_id": ObjectId(doctor["user_id"])},
-            {"$set": {"status": new_user_status, "updated_at": datetime.utcnow()}}
+            {"$set": {"status": new_user_status, "updated_at": datetime.now(timezone.utc)}}
         )
         logger.info(f"Sincronización del estado del usuario {doctor['user_id']} a {new_user_status} por deactivación médica.")
 

@@ -2,7 +2,7 @@
 auth_utils.py — Utilidades de hashing y gestión de JWT tokens
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Union
 from jose import jwt, JWTError
 from passlib.context import CryptContext
@@ -29,9 +29,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=60) # 1 hora por defecto en desarrollo
+        expire = datetime.now(timezone.utc) + timedelta(minutes=60) # 1 hora por defecto en desarrollo
     
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
@@ -43,9 +43,9 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
     """
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(days=7) # 7 días por defecto
+        expire = datetime.now(timezone.utc) + timedelta(days=7) # 7 días por defecto
         
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")

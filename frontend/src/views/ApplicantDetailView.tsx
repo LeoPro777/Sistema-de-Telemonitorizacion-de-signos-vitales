@@ -149,14 +149,14 @@ export const ApplicantDetailView: React.FC = () => {
             {/* Document body (High fidelity mock) */}
             <div className="flex-1 overflow-y-auto bg-black/40 border border-[#1E2640]/55 p-6 rounded-2xl space-y-4 leading-relaxed text-[11px] text-slate-400 font-mono select-none">
               <div className="text-center font-bold text-slate-200 border-b border-[#1E2640]/30 pb-3 uppercase">
-                REPÚBLICA DE CHILE — DOCUMENTO DE ACREDITACIÓN PÚBLICA
+                REPÚBLICA BOLIVARIANA DE VENEZUELA — DOCUMENTO DE ACREDITACIÓN PÚBLICA
               </div>
               <div className="flex justify-between font-bold text-[9px] text-slate-500 uppercase">
                 <span>EXPEDIENTE: AUTH-9021</span>
-                <span>FECHA REGISTRO: {new Date().toLocaleDateString()}</span>
+                <span>FECHA REGISTRO: {new Date(applicant.submitted_at).toLocaleDateString('es-VE', { timeZone: 'America/Caracas' })}</span>
               </div>
               <p>
-                Por medio del presente instrumento se certifica y valida la identidad jurídica de don(ña) <strong className="text-slate-300">{personal.first_name} {personal.last_name}</strong>, titular de la Cédula Nacional de Identidad/RUT número <strong className="text-slate-300">{personal.identification_number}</strong>.
+                Por medio del presente instrumento se certifica y valida la identidad jurídica de don(ña) <strong className="text-slate-300">{personal.first_name} {personal.last_name}</strong>, titular de la Cédula de Identidad número <strong className="text-slate-300">{personal.identification_number}</strong>.
               </p>
               {isDoctor ? (
                 <p>
@@ -250,7 +250,7 @@ export const ApplicantDetailView: React.FC = () => {
                   <span className="text-[9px] text-slate-500 font-bold block uppercase">Fecha de Envío</span>
                   <span className="text-slate-300 font-semibold block mt-0.5 flex items-center space-x-1.5">
                     <Clock className="h-3.5 w-3.5 text-slate-500" />
-                    <span>{new Date(applicant.submitted_at).toLocaleString()}</span>
+                    <span>{new Date(applicant.submitted_at).toLocaleString('es-VE', { timeZone: 'America/Caracas' })}</span>
                   </span>
                 </div>
               </div>

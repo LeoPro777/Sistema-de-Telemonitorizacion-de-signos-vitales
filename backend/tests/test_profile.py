@@ -43,12 +43,12 @@ def test_get_and_update_profile(mock_verify):
         # 4. Actualizar el perfil
         update_payload = {
             "personal_data": {
-                "phone": "+56 9 1111 2222",
+                "phone": "+58 412 111 2222",
                 "address": "Nueva direccion 123"
             }
         }
         update_response = client.put("/api/profile", json=update_payload)
         assert update_response.status_code == 200
         updated_data = update_response.json()
-        assert updated_data["personal_data"]["phone"] == "+56 9 1111 2222"
+        assert updated_data["personal_data"]["phone"] == "+58 412 111 2222"
         assert updated_data["personal_data"]["address"] == "Nueva direccion 123"

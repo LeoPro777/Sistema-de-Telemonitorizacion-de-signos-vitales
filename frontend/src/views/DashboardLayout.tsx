@@ -5,7 +5,7 @@ import {
   Heart, Menu, X, Bell, Search, LogOut, 
   LayoutDashboard, Users, Smartphone, ShieldCheck, 
   HelpCircle, UserCog, FileBarChart, Award, Building2, UserCheck,
-  Settings
+  Settings, FlaskConical
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
@@ -45,7 +45,7 @@ export const DashboardLayout: React.FC = () => {
       navigate('/login');
       return;
     }
-    if (user.status === 'PENDING') {
+    if (user.status === 'pending_approval') {
       navigate('/waiting-approval');
       return;
     }
@@ -89,9 +89,10 @@ export const DashboardLayout: React.FC = () => {
       { path: '/applicants', label: 'Aspirantes (M8)', icon: UserCheck, roles: ['ADMIN'] },
       { path: '/audits', label: 'Auditoría Forense (M12)', icon: ShieldCheck, roles: ['ADMIN'] },
       { path: '/reports', label: 'Reportes Analíticos (M13)', icon: FileBarChart, roles: ['ADMIN', 'DOCTOR'] },
+      { path: '/sandbox', label: 'Laboratorio (M14)', icon: FlaskConical, roles: ['ADMIN'] },
     ];
 
-    return allLinks.filter(link => link.roles.includes(user.role));
+    return allLinks.filter(link => user.role && link.roles.includes(user.role));
   };
 
   const sidebarLinks = getSidebarLinks();

@@ -59,7 +59,7 @@ export const LoginView: React.FC = () => {
     }
   }, [searchParams, navigate]);
 
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  const clientId = (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || '';
   const redirectUri = `${window.location.origin}/login`;
   const params = new URLSearchParams({
     client_id: clientId,

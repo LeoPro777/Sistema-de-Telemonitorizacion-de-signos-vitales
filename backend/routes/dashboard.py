@@ -2,7 +2,7 @@
 dashboard.py — Rutas para Obtención de KPIs y Configuración de Widgets
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -52,12 +52,13 @@ async def get_dashboard_config(current_user: UserResponse = Depends(get_current_
                 {"widget_id": "contract_health", "position_order": 3, "refresh_interval_ms": 60000},
             ]
             
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         new_config = {
             "user_id": ObjectId(current_user.id),
             "layout_version": "1.0.0",
             "visible_widgets": widgets,
             "theme_preference": "premium_dark",
+            "time_format": "24h",
             "created_at": now,
             "updated_at": now
         }
@@ -83,7 +84,7 @@ async def update_dashboard_config(
             detail="Debe proporcionar al menos un campo para actualizar."
         )
         
-    update_data["updated_at"] = datetime.utcnow()
+    update_data["updated_at"] = datetime.now(timezone.utc)
     
     res = await db_service.db.dashboard_configs.find_one_and_update(
         {"user_id": ObjectId(current_user.id)},
@@ -117,7 +118,7 @@ async def get_dashboard_kpis(current_user: UserResponse = Depends(get_current_us
     
     # Si no existe en la cache, intentamos buscar una general o crear valores semilla en tiempo real para evitar que falle
     if not cache_doc:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         default_metrics = {}
         if current_user.role == UserRole.ADMIN:
             default_metrics = {

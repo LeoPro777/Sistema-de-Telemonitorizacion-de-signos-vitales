@@ -135,7 +135,7 @@ export const ProfileView: React.FC = () => {
           </div>
 
           <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">
-            RUT Nacional: <strong className="text-slate-400 select-all">{personal.identification_number}</strong>
+            Cédula de Identidad: <strong className="text-slate-400 select-all">{personal.identification_number}</strong>
           </p>
         </div>
       </div>
@@ -202,7 +202,7 @@ export const ProfileView: React.FC = () => {
 
             <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between">
               <div className="space-y-1.5">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">RUT / Identificación Fiscal</span>
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Cédula / RIF / Identificación Fiscal</span>
                 <strong className="text-slate-200 block text-sm font-sans select-all">{personal.identification_number}</strong>
               </div>
               <FileText className="h-5 w-5 text-slate-600 mr-2" />

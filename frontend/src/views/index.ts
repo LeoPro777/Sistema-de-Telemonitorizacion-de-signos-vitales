@@ -25,4 +25,4 @@ export { default as ProfileEditView } from './ProfileEditView';
 export { default as SettingsView } from './SettingsView';
 export { default as AuditLogsView } from './AuditLogsView';
 export { default as ReportsView } from './ReportsView';
-
+export { default as SandboxLab } from './SandboxLab';

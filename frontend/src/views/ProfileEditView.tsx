@@ -90,10 +90,10 @@ export const ProfileEditView: React.FC = () => {
       newErrors.phone = 'Teléfono inválido (mínimo 8 dígitos, solo números, espacios y guiones).';
     }
 
-    // 3. Validar RUT / Cédula (Ejemplo chileno básico)
-    const rutRegex = /^\d{1,2}\.?\d{3}\.?\d{3}\-?[0-9kK]$/;
-    if (idNumber && !rutRegex.test(idNumber.replace(/\s/g, ''))) {
-      newErrors.idNumber = 'Formato de RUT/Cédula inválido (Ej: 12.345.678-9).';
+    // 3. Validar Cédula / RIF (Ejemplo venezolano básico)
+    const idRegex = /^(V|E|J|G|v|e|j|g)?-?\d{5,9}-?\d?$/;
+    if (idNumber && !idRegex.test(idNumber.replace(/\s/g, ''))) {
+      newErrors.idNumber = 'Formato de Cédula/RIF inválido (Ej: V-12345678 o J-12345678-9).';
     }
 
     setErrors(newErrors);
@@ -287,7 +287,7 @@ export const ProfileEditView: React.FC = () => {
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Ej: +56 9 8765 4321"
+                  placeholder="Ej: +58 412 8765 4321"
                   className={`w-full p-3 pl-10 bg-[#0B0F19] border rounded-xl outline-none text-slate-200 font-sans transition-all ${
                     errors.phone 
                       ? 'border-rose-500/50 focus:border-rose-500' 
@@ -303,14 +303,14 @@ export const ProfileEditView: React.FC = () => {
 
             {/* Identificación (Validación en caliente) */}
             <div className="space-y-1.5">
-              <label className="text-[10px] text-slate-500 font-bold uppercase block">RUT / Cédula Nacional</label>
+              <label className="text-[10px] text-slate-500 font-bold uppercase block">Cédula de Identidad / RIF</label>
               <div className="relative">
                 <input
                   type="text"
                   required
                   value={idNumber}
                   onChange={(e) => setIdNumber(e.target.value)}
-                  placeholder="Ej: 12.345.678-9"
+                  placeholder="Ej: V-12345678 o J-12345678-9"
                   className={`w-full p-3 pl-10 bg-[#0B0F19] border rounded-xl outline-none text-slate-200 font-mono transition-all ${
                     errors.idNumber 
                       ? 'border-rose-500/50 focus:border-rose-500' 
@@ -333,7 +333,7 @@ export const ProfileEditView: React.FC = () => {
                   required
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Ej: Av. Apoquindo 4400, Las Condes, Santiago"
+                  placeholder="Ej: Av. Francisco de Miranda, Chacao, Caracas"
                   className="w-full p-3 pl-10 bg-[#0B0F19] border border-[#1E2640] focus:border-[#D4AF37] rounded-xl outline-none text-slate-200 font-sans"
                 />
                 <MapPin className="h-4.5 w-4.5 text-slate-600 absolute left-3 top-3.5" />
@@ -406,12 +406,13 @@ export const ProfileEditView: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-slate-500 font-bold uppercase block">TAX ID Tributario / RUT Social</label>
+                    <label className="text-[10px] text-slate-500 font-bold uppercase block">RIF / Identificación Fiscal</label>
                     <input
                       type="text"
                       required
                       value={taxId}
                       onChange={(e) => setTaxId(e.target.value)}
+                      placeholder="Ej: J-12345678-9"
                       className="w-full p-3 bg-[#0B0F19] border border-[#1E2640] focus:border-[#D4AF37] rounded-xl outline-none text-slate-200"
                     />
                   </div>
