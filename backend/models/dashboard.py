@@ -3,7 +3,7 @@ dashboard.py — Esquemas y Modelos del Menú Principal / Dashboard (MongoDB)
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 from backend.models import PyObjectId
 
@@ -21,6 +21,8 @@ class DashboardConfigBase(BaseModel):
 class DashboardConfigCreate(DashboardConfigBase):
     user_id: PyObjectId
 
+from backend.models.user import UserRole
+
 class DashboardConfigResponse(DashboardConfigBase):
     id: PyObjectId = Field(alias="_id")
     user_id: PyObjectId
@@ -37,8 +39,15 @@ class DashboardConfigUpdate(BaseModel):
 class DashboardKPICacheResponse(BaseModel):
     id: str = Field(alias="_id")
     owner_id: Optional[PyObjectId] = None
-    cached_metrics: Dict[str, int]
+    cached_metrics: Dict[str, Any]
     last_cached_at: datetime
 
     class Config:
         populate_by_name = True
+
+class DashboardInitResponse(BaseModel):
+    role: UserRole
+    layout_version: str
+    theme_preference: str
+    visible_widgets: List[WidgetConfigSchema]
+    time_format: str

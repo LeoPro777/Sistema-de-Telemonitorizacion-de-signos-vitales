@@ -95,6 +95,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(applicants_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api/v1") # Soporte adicional para rutas del dashboard /api/v1
 app.include_router(patients_router, prefix="/api")
 app.include_router(devices_router, prefix="/api")
 app.include_router(doctors_router, prefix="/api")

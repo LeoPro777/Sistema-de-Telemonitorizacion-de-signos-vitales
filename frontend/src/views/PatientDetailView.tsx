@@ -108,7 +108,6 @@ export const PatientDetailView: React.FC = () => {
   const [notesText, setNotesText] = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isWssConnected, setIsWssConnected] = useState(false);
   const [isDeviceActive, setIsDeviceActive] = useState(false);
   const [lastDataTimestamp, setLastDataTimestamp] = useState<number | null>(null);
 
@@ -249,12 +248,8 @@ export const PatientDetailView: React.FC = () => {
           toast.error('¡Se ha disparado una alerta biométrica crítica!', { icon: '🚨' });
         }
       },
-      onConnect: () => {
-        setIsWssConnected(true);
-      },
-      onDisconnect: () => {
-        setIsWssConnected(false);
-      }
+      onConnect: () => {},
+      onDisconnect: () => {}
     });
 
     return () => {

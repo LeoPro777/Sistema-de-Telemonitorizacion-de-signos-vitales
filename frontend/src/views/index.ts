@@ -26,3 +26,6 @@ export { default as SettingsView } from './SettingsView';
 export { default as AuditLogsView } from './AuditLogsView';
 export { default as ReportsView } from './ReportsView';
 export { default as SandboxLab } from './SandboxLab';
+export { DoctorDashboard } from './DoctorDashboard';
+export { ClientDashboard } from './ClientDashboard';
+export { AdminDashboard } from './AdminDashboard';
