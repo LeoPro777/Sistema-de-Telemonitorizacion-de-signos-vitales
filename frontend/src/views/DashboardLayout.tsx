@@ -83,7 +83,7 @@ export const DashboardLayout: React.FC = () => {
     const allLinks = [
       { path: '/dashboard', label: 'Dashboard Hub', icon: LayoutDashboard, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
       { path: '/patients', label: 'Pacientes (M4)', icon: Users, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
-      { path: '/devices', label: 'Dispositivos IoT (M5)', icon: Smartphone, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
+      { path: '/devices', label: 'Dispositivos IoT (M5)', icon: Smartphone, roles: ['ADMIN'] },
       { path: '/doctors', label: 'Médicos (M6)', icon: Award, roles: ['ADMIN', 'DOCTOR'] },
       { path: '/clients', label: 'Clientes (M7)', icon: Building2, roles: ['ADMIN'] },
       { path: '/applicants', label: 'Aspirantes (M8)', icon: UserCheck, roles: ['ADMIN'] },
@@ -98,7 +98,7 @@ export const DashboardLayout: React.FC = () => {
   const sidebarLinks = getSidebarLinks();
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex overflow-hidden">
+    <div className="h-screen w-full bg-[#0B0F19] text-slate-100 flex overflow-hidden">
       
       {/* Backdrop de móvil */}
       {isSidebarOpen && (
@@ -212,10 +212,10 @@ export const DashboardLayout: React.FC = () => {
       </aside>
 
       {/* PANEL DE CONTENIDO PRINCIPAL */}
-      <div className="flex-grow flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-grow flex flex-col min-w-0 h-full">
         
         {/* TOPBAR SUPERIOR */}
-        <header className="h-16 bg-[#0F1420] border-b border-[#1E2640] flex items-center justify-between px-6 flex-shrink-0 sticky top-0 z-20">
+        <header className="h-16 bg-[#0F1420] border-b border-[#1E2640] flex items-center justify-between px-6 flex-shrink-0 z-20">
           
           {/* Lado Izquierdo: Buscador o botón menú en móvil */}
           <div className="flex items-center space-x-4">
@@ -336,7 +336,7 @@ export const DashboardLayout: React.FC = () => {
         </header>
 
         {/* SUBVISTAS DINÁMICAS (OUTLET) */}
-        <main className="flex-grow p-6 md:p-8">
+        <main className="flex-grow p-6 md:p-8 overflow-y-auto relative">
           <Outlet />
         </main>
       </div>

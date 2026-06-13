@@ -70,8 +70,27 @@ const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) 
   return children
 }
 
-// Rutas de administración y analítica
+// Guardián para proteger rutas de administración
+const AdminRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const { user } = useAuthStore()
 
+  if (user?.role !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return children
+}
+
+// Redireccionador inicial basado en rol
+const IndexRedirect: React.FC = () => {
+  const { user } = useAuthStore()
+  if (user?.role === 'CLIENT' || user?.role === 'DOCTOR') {
+    return <Navigate to="/patients" replace />
+  }
+  return <Navigate to="/dashboard" replace />
+}
+
+// Rutas de administración y analítica
 
 
 const App: React.FC = () => {
@@ -112,7 +131,7 @@ const App: React.FC = () => {
             <DashboardLayout />
           </PrivateRoute>
         }>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<IndexRedirect />} />
           <Route path="dashboard" element={<DashboardHubView />} />
           
           {/* Rutas reales del Módulo 4 */}
@@ -120,9 +139,9 @@ const App: React.FC = () => {
           <Route path="patients/:id" element={<PatientDetailView />} />
           
           {/* Rutas reales del Módulo 5 */}
-          <Route path="devices" element={<DevicesView />} />
-          <Route path="devices/:id" element={<DeviceDetailView />} />
-          <Route path="devices/provision" element={<DeviceProvisionView />} />
+          <Route path="devices" element={<AdminRoute><DevicesView /></AdminRoute>} />
+          <Route path="devices/:id" element={<AdminRoute><DeviceDetailView /></AdminRoute>} />
+          <Route path="devices/provision" element={<AdminRoute><DeviceProvisionView /></AdminRoute>} />
 
           {/* Rutas reales del Módulo 6 */}
           <Route path="doctors" element={<DoctorsView />} />

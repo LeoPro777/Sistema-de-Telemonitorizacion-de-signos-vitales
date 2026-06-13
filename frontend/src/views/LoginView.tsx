@@ -34,6 +34,8 @@ export const LoginView: React.FC = () => {
             } else if (userStatus === 'approved') {
               if (res.user.role === 'PATIENT') {
                 navigate('/patient-view', { replace: true });
+              } else if (res.user.role === 'CLIENT' || res.user.role === 'DOCTOR') {
+                navigate('/patients', { replace: true });
               } else {
                 navigate('/dashboard', { replace: true });
               }

@@ -249,7 +249,9 @@ async def ws_vitals_endpoint(websocket: WebSocket, patient_id: str):
                             {
                                 "$set": {
                                     "last_telemetry_cache": last_telemetry_cache,
-                                    "has_active_alert": has_active_alert
+                                    "has_active_alert": has_active_alert,
+                                    "is_online": True,
+                                    "last_telemetry_timestamp": now
                                 }
                             }
                         )
@@ -374,7 +376,9 @@ async def simulate_vital_signs(patient_id: str, payload: TelemetryPayload):
         {
             "$set": {
                 "last_telemetry_cache": last_telemetry_cache,
-                "has_active_alert": has_active_alert
+                "has_active_alert": has_active_alert,
+                "is_online": True,
+                "last_telemetry_timestamp": now
             }
         }
     )

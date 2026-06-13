@@ -4,6 +4,8 @@ Sistema de Telemonitorización de Signos Vitales
 """
 
 from contextlib import asynccontextmanager
+import asyncio
+from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,12 +22,37 @@ from backend.routes.support import router as support_router
 from backend.routes.profile import router as profile_router
 
 
+async def offline_checker_task():
+    while True:
+        try:
+            now = datetime.now(timezone.utc)
+            cutoff_time = now - timedelta(seconds=15)
+            # Find and update all patients who are currently marked online but haven't sent data in 15s
+            await db_service.db.patients.update_many(
+                {
+                    "is_online": True,
+                    "$or": [
+                        {"last_telemetry_timestamp": {"$lt": cutoff_time}},
+                        {"last_telemetry_timestamp": {"$exists": False}}
+                    ]
+                },
+                {"$set": {"is_online": False}}
+            )
+        except Exception as e:
+            pass
+        await asyncio.sleep(5)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Conectar base de datos y redis al arrancar
     await db_service.connect()
+    
+    # Iniciar la tarea en segundo plano para verificar desconexiones
+    checker_task = asyncio.create_task(offline_checker_task())
+    
     yield
     # Desconectar al apagar
+    checker_task.cancel()
     await db_service.disconnect()
 
 app = FastAPI(

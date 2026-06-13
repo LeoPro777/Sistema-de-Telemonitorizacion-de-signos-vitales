@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Grid, List as ListIcon, AlertTriangle, 
@@ -21,6 +21,10 @@ export const PatientsView: React.FC = () => {
   // Preferencias de vista (CARDS o LIST)
   const [viewType, setViewType] = useState<'CARDS' | 'LIST'>('CARDS');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Estado dinámico en vivo y Referencia para conexiones WS
+  const [liveData, setLiveData] = useState<Record<string, { cache: any, hasAlert: boolean, isDeviceActive: boolean }>>({});
+  const wsInstancesRef = useRef<Map<string, { ws: WebSocket | null, timeoutId: any }>>(new Map());
 
   const fetchPatients = async () => {
     setIsLoading(true);
@@ -50,6 +54,110 @@ export const PatientsView: React.FC = () => {
 
     return () => clearTimeout(delayDebounce);
   }, [search, criticality, page]);
+
+  // Manejador del ciclo de vida de WebSockets por paciente visible
+  useEffect(() => {
+    const currentMap = wsInstancesRef.current;
+    const currentIds = new Set(patients.map(p => p._id));
+
+    // 1. Limpiar WebSockets de pacientes que ya no están en esta página
+    currentMap.forEach((instance, id) => {
+      if (!currentIds.has(id)) {
+        if (instance.ws) {
+          instance.ws.close();
+        }
+        if (instance.timeoutId) {
+          clearTimeout(instance.timeoutId);
+        }
+        currentMap.delete(id);
+      }
+    });
+
+    // 2. Establecer conexiones WebSockets para los nuevos pacientes cargados
+    patients.forEach(patient => {
+      if (!currentMap.has(patient._id)) {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const baseHost = (import.meta as any).env.VITE_WS_BASE_URL 
+          ? (import.meta as any).env.VITE_WS_BASE_URL.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '')
+          : window.location.host;
+        const wsUrl = `${wsProtocol}//${baseHost}/ws/vitals/${patient._id}`;
+
+        let ws: WebSocket | null = null;
+        try {
+          ws = new WebSocket(wsUrl);
+        } catch(err) {
+          console.error("No se pudo iniciar WS para paciente", patient._id, err);
+          return;
+        }
+
+        const resetTimeout = () => {
+          const inst = currentMap.get(patient._id);
+          if (inst?.timeoutId) clearTimeout(inst.timeoutId);
+          const newTimeoutId = setTimeout(() => {
+            setLiveData(prev => ({
+              ...prev,
+              [patient._id]: { ...(prev[patient._id] || {}), isDeviceActive: false }
+            }));
+          }, 15000); // 15 segundos sin datos = Inactivo (Gris)
+          
+          if (inst) inst.timeoutId = newTimeoutId;
+        };
+
+        ws.onopen = () => {
+          console.log(`[PatientsView] WS Conectado: ${patient._id}`);
+          setLiveData(prev => ({
+            ...prev,
+            [patient._id]: { 
+              cache: patient.last_telemetry_cache, 
+              hasAlert: patient.has_active_alert, 
+              isDeviceActive: patient.is_online === true // Respeta el estado que viene de la BDD
+            }
+          }));
+          resetTimeout();
+        };
+
+        ws.onmessage = (event) => {
+          if (event.data === 'pong') return;
+          try {
+            const data = JSON.parse(event.data);
+            if (data.error) return; // Sesión inválida o faltante
+            
+            setLiveData(prev => ({
+              ...prev,
+              [patient._id]: {
+                cache: data.cache,
+                hasAlert: data.status === 'CRITICAL',
+                isDeviceActive: true
+              }
+            }));
+            resetTimeout();
+          } catch (e) {}
+        };
+
+        ws.onclose = () => {
+          console.log(`[PatientsView] WS Desconectado: ${patient._id}`);
+          setLiveData(prev => ({
+            ...prev,
+            [patient._id]: { ...(prev[patient._id] || {}), isDeviceActive: false }
+          }));
+        };
+
+        currentMap.set(patient._id, { ws, timeoutId: null });
+      }
+    });
+
+  }, [patients]);
+
+  // Limpieza global de WebSockets al desmontar la vista
+  useEffect(() => {
+    return () => {
+      wsInstancesRef.current.forEach(instance => {
+        if (instance.ws) instance.ws.close();
+        if (instance.timeoutId) clearTimeout(instance.timeoutId);
+      });
+      wsInstancesRef.current.clear();
+    };
+  }, []);
 
   const handleToggleViewType = () => {
     const nextView = viewType === 'CARDS' ? 'LIST' : 'CARDS';
@@ -175,14 +283,18 @@ export const PatientsView: React.FC = () => {
           {viewType === 'CARDS' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {patients.map((patient) => {
-                const cache = patient.last_telemetry_cache || {};
-                const hasAlert = patient.has_active_alert;
+                const live = liveData[patient._id];
+                const cache = live?.cache || patient.last_telemetry_cache || {};
+                const hasAlert = live ? live.hasAlert : patient.has_active_alert;
+                const isDeviceActive = live !== undefined ? live.isDeviceActive : (patient.is_online === true);
                 
                 return (
                   <button
                     key={patient._id}
                     onClick={() => navigate(`/patients/${patient._id}`)}
                     className={`bg-glass p-6 rounded-3xl border text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden ${
+                      !isDeviceActive ? 'grayscale opacity-60' : ''
+                    } ${
                       hasAlert 
                         ? 'border-[#FF1744]/40 bg-[#FF1744]/5 shadow-[0_0_15px_rgba(255,23,68,0.08)]' 
                         : 'border-[#1E2640] hover:border-[#D4AF37]/30'
@@ -229,7 +341,7 @@ export const PatientsView: React.FC = () => {
                         <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
                           <div 
                             className={`h-full rounded-full transition-all duration-500 ${
-                              cache.heart_rate?.status === 'CRITICAL' ? 'bg-[#FF1744]' : 'bg-[#00F2FE]'
+                              cache.heart_rate?.status === 'CRITICAL' ? 'bg-[#FF1744] animate-pulse' : 'bg-[#FF1744]'
                             }`}
                             style={{ width: `${Math.min((cache.heart_rate?.value || 0) / 120 * 100, 100)}%` }}
                           />
@@ -250,7 +362,7 @@ export const PatientsView: React.FC = () => {
                         <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
                           <div 
                             className={`h-full rounded-full transition-all duration-500 ${
-                              cache.spo2?.status === 'CRITICAL' ? 'bg-[#FF1744]' : 'bg-[#00F2FE]'
+                              cache.spo2?.status === 'CRITICAL' ? 'bg-[#FF1744] animate-pulse' : 'bg-[#00F2FE]'
                             }`}
                             style={{ width: `${cache.spo2?.value || 0}%` }}
                           />
@@ -271,7 +383,7 @@ export const PatientsView: React.FC = () => {
                         <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
                           <div 
                             className={`h-full rounded-full transition-all duration-500 ${
-                              cache.temperature?.status === 'CRITICAL' ? 'bg-[#FF1744]' : 'bg-[#00F2FE]'
+                              cache.temperature?.status === 'CRITICAL' ? 'bg-[#FF1744] animate-pulse' : 'bg-[#FFB300]'
                             }`}
                             style={{ width: `${((cache.temperature?.value || 36.5) - 34) / 6 * 100}%` }}
                           />
@@ -310,13 +422,17 @@ export const PatientsView: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-[#1E2640]/40 text-xs md:text-sm">
                     {patients.map((patient) => {
-                      const cache = patient.last_telemetry_cache || {};
-                      const hasAlert = patient.has_active_alert;
+                      const live = liveData[patient._id];
+                      const cache = live?.cache || patient.last_telemetry_cache || {};
+                      const hasAlert = live ? live.hasAlert : patient.has_active_alert;
+                      const isDeviceActive = live !== undefined ? live.isDeviceActive : (patient.is_online === true);
                       
                       return (
                         <tr 
                           key={patient._id} 
                           className={`hover:bg-[#1E2640]/20 transition-all ${
+                            !isDeviceActive ? 'grayscale opacity-60' : ''
+                          } ${
                             hasAlert ? 'bg-[#FF1744]/2' : ''
                           }`}
                         >

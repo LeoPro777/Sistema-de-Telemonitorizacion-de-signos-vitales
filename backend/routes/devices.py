@@ -61,8 +61,8 @@ async def get_devices(
     Lista los dispositivos IoT registrados con soporte para búsqueda, filtros operacionales/aprobación y paginación.
     Solo accesible para Administradores (o Doctores en caso de requerirse visualización).
     """
-    # En un caso de uso estricto, limitamos a ADMIN o DOCTOR
-    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR]:
+    # En un caso de uso estricto, limitamos a ADMIN
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tiene permisos para ver el inventario técnico de dispositivos."
@@ -112,7 +112,7 @@ async def get_device_detail(id: str, current_user: UserResponse = Depends(get_cu
     Retorna los detalles técnicos de un dispositivo específico.
     Incluye la caja de texto reactiva que lee en background el paciente asignado en la colección `patients`.
     """
-    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR]:
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acceso denegado."
