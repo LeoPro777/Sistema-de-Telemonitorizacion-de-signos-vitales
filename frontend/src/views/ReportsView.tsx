@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, User, ArrowRight, ArrowLeft, 
   Printer, Download, TrendingUp, Activity, 
@@ -9,13 +9,13 @@ import {
   Tooltip, Legend, ResponsiveContainer, AreaChart, Area 
 } from 'recharts';
 import toast from 'react-hot-toast';
+import api, { API_BASE_URL } from '../utils/api';
 
-
-interface MockPatient {
+interface Patient {
   id: string;
   name: string;
   rut: string;
-  age: number;
+  age?: number;
   condition: string;
 }
 
@@ -28,95 +28,99 @@ export const ReportsView: React.FC = () => {
   const [startDate, setStartDate] = useState<string>('2026-05-01');
   const [endDate, setEndDate] = useState<string>('2026-05-30');
   const [patientQuery, setPatientQuery] = useState<string>('');
-  const [selectedPatient, setSelectedPatient] = useState<MockPatient | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showPatientSuggestions, setShowPatientSuggestions] = useState<boolean>(false);
+  const [patientsList, setPatientsList] = useState<Patient[]>([]);
   
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [generatedReport, setGeneratedReport] = useState<any>(null);
 
-  // Lista de Pacientes Semilla para Autocompletado
-  const mockPatients: MockPatient[] = [
-    { id: "P001", name: "Juan Pérez Astudillo", rut: "V-15340281", age: 67, condition: "Insuficiencia Cardíaca Congestiva" },
-    { id: "P002", name: "María Loreto González", rut: "V-9872104", age: 72, condition: "Hipertensión Arterial Severa" },
-    { id: "P003", name: "Carlos Muñoz Troncoso", rut: "V-12443902", age: 58, condition: "Monitoreo Post-Operatorio" },
-    { id: "P004", name: "Sofía Tapia Venegas", rut: "V-18239544", age: 64, condition: "EPOC e Hipoxia Crónica" },
-    { id: "P005", name: "Diego Astudillo Valenzuela", rut: "V-14112563", age: 49, condition: "Diabetes Mellitus Tipo II" }
-  ];
+  // Buscar pacientes en la DB real usando type-ahead
+  useEffect(() => {
+    if (reportType !== 'CLINICAL') return;
+    if (selectedPatient && patientQuery === selectedPatient.name) return;
+    
+    if (!patientQuery.trim()) {
+      setPatientsList([]);
+      return;
+    }
 
-  const filteredPatients = mockPatients.filter(p => 
-    p.name.toLowerCase().includes(patientQuery.toLowerCase()) ||
-    p.rut.includes(patientQuery)
-  );
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await api.get('/patients', { params: { search: patientQuery, limit: 10 } });
+        const list = (res.data.patients || []).map((p: any) => ({
+          id: p._id,
+          name: `${p.first_name} ${p.last_name}`,
+          rut: p.national_id || 'N/A',
+          age: p.age || 65,
+          condition: p.medical_history_summary?.notes || 'Monitoreo General'
+        }));
+        setPatientsList(list);
+      } catch (err) {
+        console.error('Error al buscar pacientes:', err);
+      }
+    }, 300);
 
-  // Datos de Telemetría Biométrica Semilla para Recharts (Caso CLINICAL)
-  const [clinicalData] = useState([
-    { timestamp: '01 May', bpm: 72, spo2: 95, temp: 36.5 },
-    { timestamp: '05 May', bpm: 78, spo2: 94, temp: 36.8 },
-    { timestamp: '10 May', bpm: 85, spo2: 93, temp: 37.2 },
-    { timestamp: '15 May', bpm: 96, spo2: 90, temp: 38.1 }, // Evento Crítico
-    { timestamp: '20 May', bpm: 75, spo2: 96, temp: 36.6 },
-    { timestamp: '25 May', bpm: 70, spo2: 97, temp: 36.4 },
-    { timestamp: '30 May', bpm: 71, spo2: 96, temp: 36.5 }
-  ]);
+    return () => clearTimeout(delayDebounceFn);
+  }, [patientQuery, reportType, selectedPatient]);
 
-  // Datos de Infraestructura IoT Semilla (Caso MANAGEMENT)
-  const [managementData] = useState([
-    { date: 'Semana 1', packets: 42000, alerts: 14, latency: 110 },
-    { date: 'Semana 2', packets: 51000, alerts: 8, latency: 98 },
-    { date: 'Semana 3', packets: 68000, alerts: 25, latency: 125 }, // Alta carga
-    { date: 'Semana 4', packets: 59000, alerts: 10, latency: 105 }
-  ]);
+  const filteredPatients = patientsList;
 
-  const handlePatientSelect = (p: MockPatient) => {
+  const handlePatientSelect = (p: Patient) => {
     setSelectedPatient(p);
     setPatientQuery(p.name);
     setShowPatientSuggestions(false);
     toast.success(`Paciente seleccionado: ${p.name}`);
   };
 
-  const handleProcess = () => {
+  const handleProcess = async () => {
     if (reportType === 'CLINICAL' && !selectedPatient) {
       toast.error('Debe seleccionar un paciente para el Reporte Clínico.');
       return;
     }
     
     setIsProcessing(true);
-    // Simular procesamiento asíncrono
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      const res = await api.post('/reports', {
+        report_type: reportType,
+        start_date: new Date(startDate).toISOString(),
+        end_date: new Date(endDate).toISOString(),
+        patient_id: reportType === 'CLINICAL' && selectedPatient ? selectedPatient.id : null
+      });
+      setGeneratedReport(res.data);
       setStep(3);
       toast.success('Reporte compilado y pre-calculado con éxito.');
-    }, 1200);
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || 'Error al procesar reporte.';
+      toast.error(detail);
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleExportPDF = () => {
+    if (!generatedReport) return;
+    const token = localStorage.getItem('access_token');
+    const reportId = generatedReport._id || generatedReport.id;
+    const exportUrl = `${API_BASE_URL}/reports/${reportId}/export/pdf?token=${token}`;
+    
     toast.success('Descargando expediente PDF compilado por AURA Doc Generator...');
-    // Simular descarga de PDF
-    const link = document.createElement('a');
-    link.href = '#';
-    toast.success('Servicio de Almacenamiento en Nube: PDF descargado.');
+    setTimeout(() => {
+      window.open(exportUrl, '_blank');
+    }, 1000);
   };
 
   const handleExportCSV = () => {
-    toast.success('Generando archivo CSV estructurado...');
-    let csvContent = "";
+    if (!generatedReport) return;
+    const token = localStorage.getItem('access_token');
+    const reportId = generatedReport._id || generatedReport.id;
+    const exportUrl = `${API_BASE_URL}/reports/${reportId}/export/csv?token=${token}`;
     
-    if (reportType === 'CLINICAL') {
-      csvContent = "Sello de Tiempo,Frecuencia Cardiaca (BPM),Saturacion Oxigeno (SpO2 %),Temperatura (C)\n" +
-        clinicalData.map(d => `${d.timestamp},${d.bpm},${d.spo2},${d.temp}`).join("\n");
-    } else {
-      csvContent = "Periodo,Paquetes IoT Procesados,Alertas Registradas,Latencia Red (ms)\n" +
-        managementData.map(d => `${d.date},${d.packets},${d.alerts},${d.latency}`).join("\n");
-    }
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", url);
-    downloadAnchor.setAttribute("download", `aura_reporte_${reportType.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    toast.success('Archivo CSV descargado con éxito.');
+    toast.success('Descargando expediente CSV compilado...');
+    setTimeout(() => {
+      window.open(exportUrl, '_blank');
+    }, 1000);
   };
 
   return (
@@ -318,7 +322,7 @@ export const ReportsView: React.FC = () => {
                             <span className="text-[9px] text-slate-500">Cédula: {p.rut} — Edad: {p.age} años</span>
                           </div>
                           <span className="text-[9px] text-[#D4AF37] font-semibold bg-[#D4AF37]/5 px-2 py-0.5 rounded border border-[#D4AF37]/15">
-                            {p.id}
+                            {p.id.substring(0, 8)}
                           </span>
                         </div>
                       ))
@@ -350,7 +354,7 @@ export const ReportsView: React.FC = () => {
                   <span className="text-[9px] text-blue-400 font-bold uppercase block font-mono">Infraestructura General</span>
                   <strong className="text-slate-200 font-mono">Consola Global de Equipos</strong>
                   <span className="text-slate-400 block">
-                    Este reporte compila la actividad de los {mockPatients.length} pacientes activos y los {mockPatients.length} equipos AURA-ESP32 vinculados en la red clínica.
+                    Este reporte compila la actividad de los pacientes activos y los equipos AURA-ESP32 vinculados en la red clínica.
                   </span>
                 </div>
               </div>
@@ -393,7 +397,7 @@ export const ReportsView: React.FC = () => {
       {/* ======================================================== */}
       {/* PASO 3: PREVISUALIZACIÓN DE REPORTE Y EXPORTACIÓN */}
       {/* ======================================================== */}
-      {step === 3 && (
+      {step === 3 && generatedReport && (
         <div className="space-y-6">
           
           {/* Controles Flotantes Superiores */}
@@ -440,10 +444,10 @@ export const ReportsView: React.FC = () => {
                   SISTEMA DE TELEMONITORIZACIÓN AURA
                 </span>
                 <h1 className="text-xl md:text-2xl font-black text-slate-100 uppercase tracking-tight">
-                  Expediente de Monitoreo Clínico
+                  {reportType === 'CLINICAL' ? 'Expediente de Monitoreo Clínico' : 'Reporte de Gestión de Red e Inventario'}
                 </h1>
                 <p className="text-[9px] text-slate-500 font-sans uppercase">
-                  Generado automáticamente • {new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' })}
+                  Generado automáticamente • {new Date(generatedReport.created_at).toLocaleString('es-VE')}
                 </p>
               </div>
 
@@ -451,11 +455,15 @@ export const ReportsView: React.FC = () => {
               <div className="flex gap-3">
                 <div className="border border-[#1E2640] p-2 rounded-xl text-center min-w-[70px] bg-black/25">
                   <span className="text-[7px] text-slate-600 block uppercase font-bold">Audit Code</span>
-                  <span className="text-[9px] text-[#D4AF37] font-bold font-mono">AURA-2605</span>
+                  <span className="text-[9px] text-[#D4AF37] font-bold font-mono">
+                    {`AURA-${generatedReport._id || generatedReport.id}`.substring(0, 14)}
+                  </span>
                 </div>
                 <div className="border border-emerald-500/25 bg-emerald-500/5 p-2 rounded-xl text-center min-w-[70px] flex flex-col justify-center">
                   <span className="text-[7px] text-emerald-400 block uppercase font-bold">Status</span>
-                  <span className="text-[8px] text-emerald-400 font-bold uppercase tracking-wider">VERIFIED</span>
+                  <span className="text-[8px] text-emerald-400 font-bold uppercase tracking-wider">
+                    {generatedReport.status}
+                  </span>
                 </div>
               </div>
             </div>
@@ -465,16 +473,16 @@ export const ReportsView: React.FC = () => {
               
               <div className="space-y-1 font-sans">
                 <span className="text-[9px] text-slate-500 font-bold uppercase font-mono block">Especificación de Muestra</span>
-                {reportType === 'CLINICAL' && selectedPatient ? (
+                {reportType === 'CLINICAL' ? (
                   <>
-                    <p className="text-slate-300 font-mono"><strong className="text-slate-100">Paciente:</strong> {selectedPatient.name}</p>
-                    <p className="text-slate-300 font-mono"><strong className="text-slate-100">Cédula Identidad:</strong> {selectedPatient.rut}</p>
-                    <p className="text-slate-300 font-mono"><strong className="text-slate-100">Fisiopatología:</strong> {selectedPatient.condition}</p>
+                    <p className="text-slate-300 font-mono"><strong className="text-slate-100">Paciente:</strong> {generatedReport.preview_snapshot.patient_name}</p>
+                    <p className="text-slate-300 font-mono"><strong className="text-slate-100">Cédula Identidad:</strong> {generatedReport.preview_snapshot.rut}</p>
+                    <p className="text-slate-300 font-mono"><strong className="text-slate-100">Fisiopatología:</strong> {generatedReport.preview_snapshot.condition}</p>
                   </>
                 ) : (
                   <>
                     <p className="text-slate-300 font-mono"><strong className="text-slate-100">Tipo de Muestra:</strong> Auditoría de Infraestructura y Redes</p>
-                    <p className="text-slate-300 font-mono"><strong className="text-slate-100">Equipos Registrados:</strong> {mockPatients.length} Dispositivos AURA-ESP32</p>
+                    <p className="text-slate-300 font-mono"><strong className="text-slate-100">Equipos Registrados:</strong> {generatedReport.preview_snapshot.total_devices} Dispositivos AURA-ESP32</p>
                     <p className="text-slate-300 font-mono"><strong className="text-slate-100">Gobernanza Local:</strong> MongoDB Atlas & Redis Cache</p>
                   </>
                 )}
@@ -484,7 +492,7 @@ export const ReportsView: React.FC = () => {
                 <span className="text-[9px] text-slate-500 font-bold uppercase font-mono block">Detalles de Operación</span>
                 <p className="text-slate-300 font-mono"><strong className="text-slate-100">Rango Inicial:</strong> {startDate}</p>
                 <p className="text-slate-300 font-mono"><strong className="text-slate-100">Rango Final:</strong> {endDate}</p>
-                <p className="text-slate-300 font-mono"><strong className="text-slate-100">Operador:</strong> dr_lopez (Médico Coordinador)</p>
+                <p className="text-slate-300 font-mono"><strong className="text-slate-100">Operador ID:</strong> {generatedReport.requested_by}</p>
               </div>
 
             </div>
@@ -494,6 +502,39 @@ export const ReportsView: React.FC = () => {
               
               {reportType === 'CLINICAL' ? (
                 <>
+                  {/* Grid de Métricas Clínicas Avanzadas */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-[#0F1420] border border-[#1E2640] p-4 rounded-2xl space-y-1">
+                      <span className="text-[8px] text-slate-500 block uppercase font-bold">Frecuencia Cardiaca Promedio</span>
+                      <strong className="text-lg text-rose-500 block font-mono">
+                        {generatedReport.preview_snapshot.avg_bpm} BPM
+                      </strong>
+                      <span className="text-[9px] text-slate-400 block font-sans">
+                        Desviación Estándar (σ): {generatedReport.preview_snapshot.volatility_bpm}
+                      </span>
+                    </div>
+
+                    <div className="bg-[#0F1420] border border-[#1E2640] p-4 rounded-2xl space-y-1">
+                      <span className="text-[8px] text-slate-500 block uppercase font-bold">Saturación SpO2 Promedio</span>
+                      <strong className="text-lg text-sky-400 block font-mono">
+                        {generatedReport.preview_snapshot.avg_spo2}%
+                      </strong>
+                      <span className="text-[9px] text-slate-400 block font-sans">
+                        Desviación Estándar (σ): {generatedReport.preview_snapshot.volatility_spo2}
+                      </span>
+                    </div>
+
+                    <div className="bg-[#0F1420] border border-[#1E2640] p-4 rounded-2xl space-y-1">
+                      <span className="text-[8px] text-slate-500 block uppercase font-bold">Correlación Cruzada (Pulso vs SpO2)</span>
+                      <strong className="text-lg text-amber-500 block font-mono">
+                        r = {generatedReport.preview_snapshot.correlation_r}
+                      </strong>
+                      <span className="text-[9px] text-slate-400 block font-sans leading-tight">
+                        {generatedReport.preview_snapshot.correlation_desc}
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Curvas Clínicas Multilínea con Recharts */}
                   <div className="space-y-3">
                     <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest flex items-center space-x-1.5">
@@ -504,7 +545,7 @@ export const ReportsView: React.FC = () => {
                     {/* Gráfico Recharts con Estilo Premium */}
                     <div className="h-80 w-full bg-black/45 border border-[#1E2640] rounded-2xl p-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={clinicalData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <LineChart data={generatedReport.preview_snapshot.chart_data || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#1E2640" />
                           <XAxis dataKey="timestamp" stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
                           <YAxis stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
@@ -558,7 +599,7 @@ export const ReportsView: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E2640]/40 text-slate-300">
-                          {clinicalData.map((d, index) => (
+                          {(generatedReport.preview_snapshot.chart_data || []).map((d: any, index: number) => (
                             <tr key={index} className="hover:bg-[#1E2640]/10">
                               <td className="py-2.5 px-4">{d.timestamp}</td>
                               <td className="py-2.5 px-4 text-center font-bold">{d.bpm}</td>
@@ -567,7 +608,7 @@ export const ReportsView: React.FC = () => {
                               </td>
                               <td className="py-2.5 px-4 text-center font-bold">{d.temp}°C</td>
                               <td className="py-2.5 px-4 text-right">
-                                {d.bpm > 95 || d.spo2 < 92 || d.temp > 38.0 ? (
+                                {d.bpm > 100 || d.spo2 < 92 || d.temp > 37.5 || d.temp < 35.5 ? (
                                   <span className="text-[9px] px-2 py-0.5 rounded bg-[#FF1744]/15 border border-[#FF1744]/25 text-[#FF1744] font-extrabold uppercase animate-pulse">
                                     ALERTA CRÍTICA
                                   </span>
@@ -596,7 +637,7 @@ export const ReportsView: React.FC = () => {
                       
                       <div className="h-64 w-full bg-black/45 border border-[#1E2640] rounded-2xl p-4">
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={managementData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <AreaChart data={generatedReport.preview_snapshot.chart_data || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorPackets" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
@@ -631,7 +672,7 @@ export const ReportsView: React.FC = () => {
                       
                       <div className="h-64 w-full bg-black/45 border border-[#1E2640] rounded-2xl p-4">
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={managementData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <LineChart data={generatedReport.preview_snapshot.chart_data || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#1E2640" />
                             <XAxis dataKey="date" stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
                             <YAxis stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
@@ -665,22 +706,30 @@ export const ReportsView: React.FC = () => {
                     
                     <div className="bg-[#0F1420] border border-[#1E2640] p-4 rounded-2xl text-center space-y-1">
                       <span className="text-[8px] text-slate-500 block uppercase font-bold">Total de Equipos</span>
-                      <strong className="text-base text-[#D4AF37] block font-mono">12 Activos</strong>
+                      <strong className="text-base text-[#D4AF37] block font-mono">
+                        {generatedReport.preview_snapshot.total_devices} Activos
+                      </strong>
                     </div>
 
                     <div className="bg-[#0F1420] border border-[#1E2640] p-4 rounded-2xl text-center space-y-1">
-                      <span className="text-[8px] text-slate-500 block uppercase font-bold">Puntos de Telemetría</span>
-                      <strong className="text-base text-[#D4AF37] block font-mono">220,000 p/d</strong>
+                      <span className="text-[8px] text-slate-500 block uppercase font-bold">Pérdida de Paquetes</span>
+                      <strong className="text-base text-rose-500 block font-mono">
+                        {generatedReport.preview_snapshot.packet_loss_percent}%
+                      </strong>
                     </div>
 
                     <div className="bg-[#0F1420] border border-[#1E2640] p-4 rounded-2xl text-center space-y-1">
                       <span className="text-[8px] text-slate-500 block uppercase font-bold">Latencia de Red Promedio</span>
-                      <strong className="text-base text-emerald-400 block font-mono">107 ms</strong>
+                      <strong className="text-base text-emerald-400 block font-mono">
+                        {generatedReport.preview_snapshot.avg_latency} ms
+                      </strong>
                     </div>
 
                     <div className="bg-[#0F1420] border border-[#1E2640] p-4 rounded-2xl text-center space-y-1">
-                      <span className="text-[8px] text-slate-500 block uppercase font-bold">Alertas Sanitarias</span>
-                      <strong className="text-base text-rose-500 block font-mono">57 Registros</strong>
+                      <span className="text-[8px] text-slate-500 block uppercase font-bold">Alertas del Sistema</span>
+                      <strong className="text-base text-rose-500 block font-mono">
+                        {generatedReport.preview_snapshot.system_alerts} Registros
+                      </strong>
                     </div>
 
                   </div>
@@ -694,7 +743,9 @@ export const ReportsView: React.FC = () => {
               
               <div className="text-center md:text-left space-y-0.5">
                 <p className="uppercase font-bold text-[#D4AF37]/80 font-mono">Firma Digital Registrada</p>
-                <p className="font-mono text-[9px] text-slate-600 select-all">SHA-256: 4e9c7a2b10e49c5faa4cE1922f7ab32e10e49c5f</p>
+                <p className="font-mono text-[9px] text-slate-600 select-all">
+                  SHA-256: {generatedReport._id || generatedReport.id}
+                </p>
               </div>
 
               <div className="text-center md:text-right space-y-0.5">

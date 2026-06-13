@@ -20,6 +20,7 @@ from backend.routes.doctors import router as doctors_router
 from backend.routes.clients import router as clients_router
 from backend.routes.support import router as support_router
 from backend.routes.profile import router as profile_router
+from backend.routes.reports import router as reports_router
 
 
 async def offline_checker_task():
@@ -102,6 +103,8 @@ app.include_router(doctors_router, prefix="/api")
 app.include_router(clients_router, prefix="/api")
 app.include_router(support_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
+app.include_router(reports_router, prefix="/api")
+app.include_router(reports_router, prefix="/api/v1")
 
 app.include_router(vitals_router) # Registrado sin prefijo para que coincida /ws/vitals y /api/vitals/simulate
 
