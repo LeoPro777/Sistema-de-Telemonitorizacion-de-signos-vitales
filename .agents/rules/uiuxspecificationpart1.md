@@ -70,7 +70,13 @@ description: Cuando el modelo crea que sea necesario, si se llega a tocar cualqu
 * **Layout:** División 30% izquierda (perfil y umbrales fijos) y 70% derecha (módulo de pestañas dinámicas).
 * **Componentes:** Botón de edición, interruptor de activación/inactivación lógica, sliders dobles para calibrar `clinical_thresholds`.
 * **Pestañas:**
-  1. *Gráficos:* Tres canvas independientes e interconectados temporalmente con zoom interactivo y el botón flotante **"DESCARGAR DATOS"** (PDF, CSV o JSON).
+  1. *Gráficos (Lienzo Infinito de Telemetría Dinámica - Componente 1 Redefinido):*
+     * **Comportamiento UX (Drag-to-Pan):** Clic izquierdo sostenido sobre cualquier punto del gráfico y arrastre horizontal hacia la derecha o izquierda. En móviles, se realiza mediante arrastre táctil con un dedo (`touch-to-pan`). Mover a la derecha "arrastra" el pasado; a la izquierda empuja al futuro. El frontend recalcula límites sumando/restando delta de píxeles al rango visible.
+     * **Zoom Fluido (Scroll-to-Zoom & Botones):** Giro de rueda del mouse, pinza con dos dedos en pantallas táctiles (`pinch-to-zoom`), o mediante los botones interactivos **Zoom In** / **Zoom Out** situados en la barra de control inferior. Zoom In contrae la ventana temporal para mayor detalle biométrico; Zoom Out la expande para tendencias macro.
+     * **Máquina de Estados y el Botón "Live-Edge":** Controlado por estado `is_tracking_live`. Si es `true`, avanza automáticamente con datos de WebSockets. Si es `false` (iniciada navegación histórica), congela el auto-scroll. Aparece botón flotante `▲ Regresar al tiempo real` en esquina inferior derecha. Al hacer clic, hace un snap-back suave al presente y restablece `is_tracking_live = true`.
+     * **Persistencia del Eje de Tiempo:** El eje temporal (X-Axis) debe permanecer siempre visible y renderizar la secuencia de marcas de tiempo del rango consultado, incluso si la base de datos no contiene puntos de telemetría en ese bloque (generando puntos virtuales vacíos `undefined` espaciados).
+     * **Lazy Loading:** Frontend mantiene en memoria solo datos visibles. Al arrastrar al pasado, el frontend calcula el bloque faltante e invoca la API `GET /api/patients/{id}/vitals-history` (u homóloga `/api/v1/telemetry/{id}/history`). MongoDB agrupa por minuto en zoom lejano y devuelve puntos puros segundo a segundo en zoom cercano.
+     * **Descarga de Datos:** Botón flotante **"DESCARGAR DATOS"** (PDF, CSV o JSON).
   2. *Alertas:* Historial inmutable ordenado de forma descendente consumiendo la colección `alerts`.
   3. *Historial Clínico:* Visualización del objeto flexible `medical_history_summary`.
 * **UX & Comportamiento:** Mover un slider de umbrales en el panel izquierdo despliega y arrastra una línea horizontal roja guía en las gráficas de la derecha en tiempo real.
