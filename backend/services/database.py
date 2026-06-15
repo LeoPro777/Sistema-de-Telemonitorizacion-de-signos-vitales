@@ -12,6 +12,7 @@ logger = logging.getLogger("app.database")
 class DatabaseService:
     def __init__(self):
         self.mongo_client: AsyncIOMotorClient = None
+        self.raw_db = None
         self.db = None
         self.redis: Redis = None
 
@@ -22,7 +23,18 @@ class DatabaseService:
         # MongoDB
         logger.info(f"Conectando a MongoDB en: {settings.MONGO_URI}")
         self.mongo_client = AsyncIOMotorClient(settings.MONGO_URI, tz_aware=True)
-        self.db = self.mongo_client[settings.MONGO_DB]
+        self.raw_db = self.mongo_client[settings.MONGO_DB]
+        
+        # Envolver la base de datos para interceptar mutaciones de auditoría
+        from backend.services.audit import WrappedDatabase
+        self.db = WrappedDatabase(self.raw_db, self)
+
+        # Crear índice compuesto inmutable en la colección audit_logs
+        try:
+            await self.raw_db.audit_logs.create_index([("log_type", 1), ("criticality", 1), ("timestamp", -1)])
+            logger.info("Índice compuesto en audit_logs inicializado.")
+        except Exception as e:
+            logger.warning(f"Fallo al crear índice compuesto en audit_logs: {e}")
         
         # Redis
         logger.info(f"Conectando a Redis en: {settings.REDIS_URL}")

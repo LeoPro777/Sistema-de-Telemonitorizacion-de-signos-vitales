@@ -514,3 +514,106 @@ async def get_me(current_user: UserResponse = Depends(get_current_user)):
     """
     return current_user
 
+
+class BypassLoginRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/bypass-login", response_model=LoginResponse)
+async def bypass_login(req: BypassLoginRequest, response: Response):
+    """
+    Endpoint de desarrollo para iniciar sesión omitiendo Google OAuth.
+    Busca al usuario por email; si no existe, lo crea en estado INCOMPLETE.
+    Genera la sesión y establece la cookie de la misma forma que google_login.
+    """
+    if settings.ENVIRONMENT == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bypass login no está permitido en producción."
+        )
+
+    now = datetime.now(timezone.utc)
+    # Buscar usuario en DB por email
+    user_doc = await db_service.db.users.find_one({"email": req.email})
+
+    if not user_doc:
+        # Registrar nuevo usuario en estado INCOMPLETE
+        user_id = ObjectId()
+        google_id = f"mock_{user_id}"
+        # Generar nombre y apellido ficticios basados en el email
+        parts = req.email.split('@')[0].split('.')
+        first_name = parts[0].capitalize()
+        last_name = parts[1].capitalize() if len(parts) > 1 else "User"
+        
+        user_doc = {
+            "_id": user_id,
+            "google_id": google_id,
+            "email": req.email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "avatar_url": "https://lh3.googleusercontent.com/a/default-user",
+            "role": None,
+            "status": UserStatus.INCOMPLETE,
+            "created_at": now,
+            "updated_at": now
+        }
+        await db_service.db.users.insert_one(user_doc)
+        logger.info(f"[bypass_login] Nuevo usuario registrado vía bypass: {req.email}")
+    else:
+        # Actualizar updated_at
+        await db_service.db.users.update_one(
+            {"_id": user_doc["_id"]},
+            {
+                "$set": {
+                    "updated_at": now
+                }
+            }
+        )
+        user_doc = await db_service.db.users.find_one({"_id": user_doc["_id"]})
+
+    # Verificar si el usuario está suspendido o rechazado
+    if user_doc["status"] == UserStatus.SUSPENDED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Esta cuenta ha sido suspendida. Contacte al administrador."
+        )
+    elif user_doc["status"] == UserStatus.REJECTED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Su solicitud de registro ha sido rechazada."
+        )
+
+    # Generar sesión en base de datos
+    session_id = str(ObjectId())
+    session_doc = {
+        "_id": ObjectId(session_id),
+        "user_id": user_doc["_id"],
+        "session_id": session_id,
+        "device_info": {
+            "user_agent": "bypass_client",
+            "ip_address": "127.0.0.1"
+        },
+        "expires_at": now + timedelta(days=7),
+        "created_at": now
+    }
+    await db_service.db.auth_sessions.insert_one(session_doc)
+
+    # Firmar el session_id y emitir la cookie HTTPOnly
+    signed_session = sign_session_id(session_id)
+    response.set_cookie(
+        key="session_id",
+        value=signed_session,
+        httponly=True,
+        secure=False,  # Permitido en localhost para desarrollo
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,  # 7 días
+        path="/"
+    )
+    logger.info(f"[bypass_login] Sesión bypass creada con éxito para: {req.email}. session_id: {session_id}")
+
+    return LoginResponse(
+        success=True,
+        user=UserResponse(**user_doc)
+    )
+
+

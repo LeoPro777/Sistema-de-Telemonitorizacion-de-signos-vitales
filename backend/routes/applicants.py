@@ -199,6 +199,44 @@ async def review_applicant(email: str, req: ReviewRequest):
                 upsert=True
             )
 
+        elif role == UserRole.PATIENT:
+            # Crear perfil de paciente
+            patient_doc = {
+                "_id": ObjectId(),
+                "user_id": user_doc["_id"],
+                "is_active": True,
+                "ui_preferences": {"view_type": "CARDS"},
+                "medical_record_id": f"MR-{personal['identification_number'][-5:] if len(personal['identification_number']) >= 5 else personal['identification_number']}",
+                "national_id": personal["identification_number"],
+                "first_name": personal["first_name"],
+                "last_name": personal["last_name"],
+                "assigned_doctor_id": None,
+                "assigned_device_id": None,
+                "client_id": None,
+                "clinical_thresholds": {
+                    "heart_rate": {"min_bpm": 60, "max_bpm": 100},
+                    "spo2": {"critical_min_percent": 92},
+                    "temperature": {"min_celsius": 35.5, "max_celsius": 37.5}
+                },
+                "last_telemetry_cache": None,
+                "has_active_alert": False,
+                "medical_history_summary": {
+                    "blood_type": metadata.get("blood_type", "O+"),
+                    "pathologies": [],
+                    "allergies": [],
+                    "notes": metadata.get("notes", "")
+                },
+                "created_at": now,
+                "updated_at": now
+            }
+            # Guardar si no existe
+            await db_service.db.patients.update_one(
+                {"user_id": user_doc["_id"]},
+                {"$setOnInsert": patient_doc},
+                upsert=True
+            )
+
+
     return {
         "message": f"Solicitud del aspirante evaluada exitosamente como {req.status}.",
         "email": email,

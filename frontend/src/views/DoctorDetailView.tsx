@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { ConfirmationModal } from '../components';
 
 export const DoctorDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ export const DoctorDetailView: React.FC = () => {
   const [doctor, setDoctor] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const fetchDoctorDetail = async () => {
     setIsLoading(true);
@@ -283,7 +285,7 @@ export const DoctorDetailView: React.FC = () => {
             </p>
 
             <button
-              onClick={handleToggleActiveState}
+              onClick={() => setIsConfirmOpen(true)}
               disabled={isUpdating}
               className={`w-full py-3 text-xs font-extrabold rounded-xl flex items-center justify-center space-x-2 transition-all uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed ${
                 doctor.is_active 
@@ -300,6 +302,19 @@ export const DoctorDetailView: React.FC = () => {
 
       </div>
 
+      <ConfirmationModal
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleToggleActiveState}
+        title={doctor.is_active ? 'Inhabilitar Médico' : 'Habilitar Médico'}
+        message={
+          doctor.is_active
+            ? `¿Está seguro de que desea inhabilitar al Dr. ${doctor.first_name} ${doctor.last_name}? Esto suspenderá su acceso al sistema y revocará sus permisos clínicos de forma inmediata.`
+            : `¿Está seguro de que desea habilitar al Dr. ${doctor.first_name} ${doctor.last_name}? Esto reactivará su acceso al sistema y sus funciones clínicas.`
+        }
+        confirmText={doctor.is_active ? 'Inhabilitar' : 'Habilitar'}
+        type={doctor.is_active ? 'danger' : 'success'}
+      />
     </div>
   );
 };

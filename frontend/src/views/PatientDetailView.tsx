@@ -14,6 +14,9 @@ import api, { API_BASE_URL } from '../utils/api';
 import vitalsSocket from '../utils/vitalsSocket';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import { ConfirmationModal, EntityLookupModal, ActionVerificationModal } from '../components';
+import { EntityType } from '../components/EntityLookupModal';
+
 
 export const PatientDetailView: React.FC = () => {
   const { user } = useAuthStore();
@@ -43,13 +46,14 @@ export const PatientDetailView: React.FC = () => {
     setIsTrackingLive(timeOffset === 0);
   }, [timeOffset]);
 
-  // Estados de asignación de recursos
-  const [allDoctors, setAllDoctors] = useState<any[]>([]);
-  const [allDevices, setAllDevices] = useState<any[]>([]);
-  const [allClients, setAllClients] = useState<any[]>([]);
-  const [selectedDoctorId, setSelectedDoctorId] = useState('');
-  const [selectedDeviceId, setSelectedDeviceId] = useState('');
-  const [selectedClientId, setSelectedClientId] = useState('');
+  // Estados para el flujo asíncrono de vinculación (Anti-Dropdown)
+  const [lookupState, setLookupState] = useState<{ isOpen: boolean; type: EntityType; title: string }>({ isOpen: false, type: 'doctors', title: '' });
+  const [verificationState, setVerificationState] = useState<{
+    isOpen: boolean;
+    target: any;
+    type: EntityType;
+    impactText: string;
+  }>({ isOpen: false, target: null, type: 'doctors', impactText: '' });
 
   // Estados para calibrar umbrales (Sliders reactivos)
   const [minBpm, setMinBpm] = useState(60);
@@ -80,6 +84,15 @@ export const PatientDetailView: React.FC = () => {
   const [isDeviceActive, setIsDeviceActive] = useState(false);
   const [lastDataTimestamp, setLastDataTimestamp] = useState<number | null>(null);
 
+  const [doctorName, setDoctorName] = useState('Sin asignar');
+  const [clientName, setClientName] = useState('Sin asignar');
+  const [deviceName, setDeviceName] = useState('Sin vincular');
+
+  const [isConfirmThresholdsOpen, setIsConfirmThresholdsOpen] = useState(false);
+  const [isConfirmClinicalHistoryOpen, setIsConfirmClinicalHistoryOpen] = useState(false);
+  const [isConfirmResolveAlertOpen, setIsConfirmResolveAlertOpen] = useState(false);
+  const [alertIdToResolve, setAlertIdToResolve] = useState<string | null>(null);
+
   // Componente 4: Timeline de Micro-Incidentes Transitorios
   const [microIncidents, setMicroIncidents] = useState<any[]>([
     { time: 'Hace 5m', desc: '[09:42:15] - Infracción transitoria de HR Máxima (102 bpm) durante 3s. Estado: Normalizado.', color: 'text-slate-400' },
@@ -87,51 +100,48 @@ export const PatientDetailView: React.FC = () => {
     { time: 'Hace 20m', desc: '[09:27:01] - Caída transitoria de SpO2 (91%) durante 4s. Estado: Normalizado.', color: 'text-amber-500' }
   ]);
 
-  // Cargar opciones de asignación
-  useEffect(() => {
-    const fetchAssignmentOptions = async () => {
-      try {
-        const [docRes, devRes, cliRes] = await Promise.all([
-          api.get('/doctors', { params: { limit: 100 } }),
-          api.get('/devices', { params: { limit: 100 } }),
-          api.get('/clients', { params: { limit: 100 } })
-        ]);
-        setAllDoctors(docRes.data.doctors || []);
+  // Funciones del flujo Anti-Dropdown
+  const openLookupModal = (type: EntityType, title: string) => {
+    setLookupState({ isOpen: true, type, title });
+  };
 
-        const currentDevId = patient?.assigned_device_id;
-        const filteredDevices = (devRes.data.devices || []).filter(
-          (d: any) => d.operational_status === 'AVAILABLE' || d._id === currentDevId
-        );
-        setAllDevices(filteredDevices);
-        setAllClients(cliRes.data.clients || []);
-      } catch (err) {
-        console.error('Error al cargar opciones de asignación:', err);
-      }
-    };
-
-    if (patient && user?.role === 'ADMIN') {
-      fetchAssignmentOptions();
-      setSelectedDoctorId(patient.assigned_doctor_id || '');
-      setSelectedDeviceId(patient.assigned_device_id || '');
-      setSelectedClientId(patient.client_id || '');
+  const handleEntitySelect = (entity: any) => {
+    let impactText = '';
+    if (lookupState.type === 'devices') {
+      impactText = `¿Confirmar asignación? El dispositivo con Serial ${entity.serial_number} comenzará a transmitir telemetría inmediatamente al expediente de este paciente.`;
+    } else if (lookupState.type === 'doctors') {
+      impactText = `Al confirmar, el Dr. ${entity.first_name} ${entity.last_name} será el responsable clínico de este paciente y comenzará a recibir sus alertas críticas telemétricas en su consola principal.`;
+    } else if (lookupState.type === 'clients') {
+      impactText = `Esta acción asociará los costos de servicio de este paciente a la cuenta contractual de la Clínica/Familia ${entity.corporate_name}.`;
     }
-  }, [patient?.assigned_doctor_id, patient?.assigned_device_id, patient?.client_id, user?.role]);
 
-  const handleSaveAssignments = async () => {
+    setVerificationState({
+      isOpen: true,
+      target: entity,
+      type: lookupState.type,
+      impactText
+    });
+  };
+
+  const executeLinkage = async () => {
     if (!id) return;
     setIsSaving(true);
     try {
-      const payload = {
-        assigned_doctor_id: selectedDoctorId || null,
-        assigned_device_id: selectedDeviceId || null,
-        client_id: selectedClientId || null
-      };
+      const payload: any = {};
+      if (verificationState.type === 'devices') {
+        payload.assigned_device_id = verificationState.target._id;
+      } else if (verificationState.type === 'doctors') {
+        payload.assigned_doctor_id = verificationState.target._id;
+      } else if (verificationState.type === 'clients') {
+        payload.client_id = verificationState.target._id;
+      }
 
       const response = await api.put(`/patients/${id}`, payload);
       setPatient(response.data.patient);
-      toast.success('Recursos clínicos asignados con éxito.');
+      toast.success('Vinculación confirmada con éxito.');
+      setVerificationState(prev => ({ ...prev, isOpen: false }));
     } catch (err: any) {
-      toast.error('Error al guardar asignaciones: ' + (err.response?.data?.detail || err.message));
+      toast.error('Error en vinculación: ' + (err.response?.data?.detail || err.message));
     } finally {
       setIsSaving(false);
     }
@@ -156,6 +166,24 @@ export const PatientDetailView: React.FC = () => {
       const pRes = await api.get(`/patients/${id}`);
       const pData = pRes.data;
       setPatient(pData);
+
+      if (pData.assigned_doctor_id) {
+        api.get(`/doctors/${pData.assigned_doctor_id}`).then(res => setDoctorName(`Dr. ${res.data.first_name} ${res.data.last_name}`)).catch(() => setDoctorName('Desconocido'));
+      } else {
+        setDoctorName('Sin asignar');
+      }
+
+      if (pData.client_id) {
+        api.get(`/clients/${pData.client_id}`).then(res => setClientName(res.data.corporate_name)).catch(() => setClientName('Desconocido'));
+      } else {
+        setClientName('Sin asignar');
+      }
+
+      if (pData.assigned_device_id) {
+        api.get(`/devices/${pData.assigned_device_id}`).then(res => setDeviceName(res.data.serial_number)).catch(() => setDeviceName('Desconocido'));
+      } else {
+        setDeviceName('Sin vincular');
+      }
 
       const thresh = pData.clinical_thresholds || {};
       setMinBpm(thresh.heart_rate?.min_bpm ?? 60);
@@ -297,8 +325,12 @@ export const PatientDetailView: React.FC = () => {
   }, [id, patient === null]);
 
   // Guardar Calibración de Umbrales Clínicos
-  const handleSaveThresholds = async () => {
+  const handleSaveThresholds = () => {
     if (!id) return;
+    setIsConfirmThresholdsOpen(true);
+  };
+
+  const executeSaveThresholds = async () => {
     setIsSaving(true);
     try {
       const payload = {
@@ -320,8 +352,12 @@ export const PatientDetailView: React.FC = () => {
   };
 
   // Guardar Ficha Clínicas de Antecedentes
-  const handleSaveClinicalHistory = async () => {
+  const handleSaveClinicalHistory = () => {
     if (!id) return;
+    setIsConfirmClinicalHistoryOpen(true);
+  };
+
+  const executeSaveClinicalHistory = async () => {
     setIsSaving(true);
     try {
       const payload = {
@@ -344,10 +380,16 @@ export const PatientDetailView: React.FC = () => {
   };
 
   // Resolver Alerta Activa
-  const handleResolveAlert = async (alertId: string) => {
+  const handleResolveAlert = (alertId: string) => {
     if (!id) return;
+    setAlertIdToResolve(alertId);
+    setIsConfirmResolveAlertOpen(true);
+  };
+
+  const executeResolveAlert = async () => {
+    if (!id || !alertIdToResolve) return;
     try {
-      const response = await api.post(`/patients/${id}/alerts/${alertId}/resolve`);
+      const response = await api.post(`/patients/${id}/alerts/${alertIdToResolve}/resolve`);
       setPatient((prev: any) => ({
         ...prev,
         has_active_alert: response.data.has_active_alert
@@ -357,6 +399,8 @@ export const PatientDetailView: React.FC = () => {
       toast.success('Alerta resuelta. Bitácora actualizada.');
     } catch (err) {
       toast.error('Error al resolver la alerta.');
+    } finally {
+      setAlertIdToResolve(null);
     }
   };
 
@@ -624,16 +668,6 @@ export const PatientDetailView: React.FC = () => {
 
   const hasAlert = patient.has_active_alert;
   const isFalsePositive = hasAlert && signalConfidence < 65;
-
-  const assignedDoctorObj = allDoctors.find(d => d._id === patient.assigned_doctor_id);
-  const doctorName = assignedDoctorObj
-    ? `${assignedDoctorObj.first_name} ${assignedDoctorObj.last_name}`
-    : 'Sin asignar';
-
-  const assignedClientObj = allClients.find(c => c._id === patient.client_id);
-  const clientName = assignedClientObj
-    ? assignedClientObj.corporate_name
-    : 'Sin asignar';
 
   return (
     <div className="space-y-6">
@@ -999,75 +1033,62 @@ export const PatientDetailView: React.FC = () => {
             <div className="bg-glass p-6 rounded-3xl border border-[#1E2640] space-y-4 font-mono text-xs text-slate-200">
               <div className="flex items-center space-x-2 border-b border-[#1E2640]/60 pb-3">
                 <Stethoscope className="h-4.5 w-4.5 text-[#D4AF37]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Asignar Recursos</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Vinculación de Recursos</h3>
               </div>
 
-              {/* Asignar Médico */}
-              <div className="space-y-1">
-                <label className="text-[9px] text-slate-500 font-bold uppercase">Médico Supervisor:</label>
-                <select
-                  value={selectedDoctorId}
-                  onChange={(e) => setSelectedDoctorId(e.target.value)}
-                  className="w-full bg-[#0B0F19] border border-[#1E2640] rounded-xl px-2.5 py-2 outline-none text-slate-300 font-sans focus:border-[#D4AF37] transition-all"
+              {/* Vincular Médico */}
+              <div className="space-y-2 pb-2 border-b border-[#1E2640]/40">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] text-slate-500 font-bold uppercase">Médico Supervisor:</label>
+                  {patient.assigned_doctor_id ? (
+                    <span className="text-emerald-400 font-bold truncate max-w-[150px]">{doctorName}</span>
+                  ) : (
+                    <span className="text-slate-500 italic">No asignado</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => openLookupModal('doctors', 'Vincular Médico')}
+                  className="w-full py-2 bg-[#0B0F19] hover:bg-[#1E2640] text-slate-300 border border-[#1E2640] hover:border-[#D4AF37]/50 rounded-xl transition-all"
                 >
-                  <option value="">-- SIN ASIGNAR --</option>
-                  {allDoctors.map(d => (
-                    <option key={d._id} value={d._id}>
-                      {d.first_name} {d.last_name} ({d.specialty})
-                    </option>
-                  ))}
-                </select>
+                  Cambiar / Asignar Médico
+                </button>
               </div>
 
-              {/* Asignar Dispositivo */}
-              <div className="space-y-1">
-                <label className="text-[9px] text-slate-500 font-bold uppercase">Dispositivo IoT:</label>
-                <select
-                  value={selectedDeviceId}
-                  onChange={(e) => setSelectedDeviceId(e.target.value)}
-                  className="w-full bg-[#0B0F19] border border-[#1E2640] rounded-xl px-2.5 py-2 outline-none text-slate-300 font-sans focus:border-[#D4AF37] transition-all"
+              {/* Vincular Dispositivo */}
+              <div className="space-y-2 pb-2 border-b border-[#1E2640]/40">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] text-slate-500 font-bold uppercase">Dispositivo IoT:</label>
+                  {patient.assigned_device_id ? (
+                    <span className="text-emerald-400 font-bold truncate max-w-[150px]">{deviceName}</span>
+                  ) : (
+                    <span className="text-slate-500 italic">No asignado</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => openLookupModal('devices', 'Vincular Dispositivo')}
+                  className="w-full py-2 bg-[#0B0F19] hover:bg-[#1E2640] text-slate-300 border border-[#1E2640] hover:border-[#D4AF37]/50 rounded-xl transition-all"
                 >
-                  <option value="">-- SIN ASIGNAR --</option>
-                  {allDevices.map(d => (
-                    <option key={d._id} value={d._id}>
-                      {d.serial_number} ({d.mac_address})
-                    </option>
-                  ))}
-                </select>
+                  Cambiar / Asignar Dispositivo
+                </button>
               </div>
 
-              {/* Asignar Cliente (Clínica o Fondeo) */}
-              <div className="space-y-1">
-                <label className="text-[9px] text-slate-500 font-bold uppercase">Cliente / Clínica:</label>
-                <select
-                  value={selectedClientId}
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="w-full bg-[#0B0F19] border border-[#1E2640] rounded-xl px-2.5 py-2 outline-none text-slate-300 font-sans focus:border-[#D4AF37] transition-all"
+              {/* Vincular Cliente */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] text-slate-500 font-bold uppercase">Cliente / Clínica:</label>
+                  {patient.client_id ? (
+                    <span className="text-emerald-400 font-bold truncate max-w-[150px]">{clientName}</span>
+                  ) : (
+                    <span className="text-slate-500 italic">No asignado</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => openLookupModal('clients', 'Vincular Cuenta de Cliente')}
+                  className="w-full py-2 bg-[#0B0F19] hover:bg-[#1E2640] text-slate-300 border border-[#1E2640] hover:border-[#D4AF37]/50 rounded-xl transition-all"
                 >
-                  <option value="">-- SIN ASIGNAR --</option>
-                  {allClients.map(c => (
-                    <option key={c._id} value={c._id}>
-                      {c.corporate_name} ({c.client_type})
-                    </option>
-                  ))}
-                </select>
+                  Cambiar / Asignar Cliente
+                </button>
               </div>
-
-              {/* Botón de guardado */}
-              <button
-                onClick={handleSaveAssignments}
-                disabled={isSaving}
-                className="w-full py-2.5 bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black font-semibold text-xs text-[#D4AF37] border border-[#D4AF37]/20 hover:border-[#D4AF37] rounded-xl flex items-center justify-center space-x-2 transition-all mt-2"
-              >
-                {isSaving ? (
-                  <div className="w-4 h-4 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    <span>Guardar Asignaciones</span>
-                  </>
-                )}
-              </button>
             </div>
           )}
 
@@ -1542,6 +1563,65 @@ export const PatientDetailView: React.FC = () => {
 
       </div>
 
+      <ConfirmationModal
+        isOpen={isConfirmThresholdsOpen}
+        onClose={() => setIsConfirmThresholdsOpen(false)}
+        onConfirm={executeSaveThresholds}
+        title="Guardar Umbrales Clínicos"
+        message={`¿Está seguro de que desea calibrar los umbrales clínicos de telemetría? Esto modificará los rangos normales y críticos para la generación automática de alertas SOS.`}
+        confirmText="Guardar Umbrales"
+        type="warning"
+      />
+
+      <ConfirmationModal
+        isOpen={isConfirmClinicalHistoryOpen}
+        onClose={() => setIsConfirmClinicalHistoryOpen(false)}
+        onConfirm={executeSaveClinicalHistory}
+        title="Actualizar Ficha de Antecedentes"
+        message="¿Está seguro de que desea guardar los cambios en la ficha de antecedentes clínicos, patologías y alergias del paciente?"
+        confirmText="Actualizar Ficha"
+        type="warning"
+      />
+
+      <ConfirmationModal
+        isOpen={isConfirmResolveAlertOpen}
+        onClose={() => {
+          setIsConfirmResolveAlertOpen(false);
+          setAlertIdToResolve(null);
+        }}
+        onConfirm={executeResolveAlert}
+        title="Resolver Alerta SOS"
+        message="¿Está seguro de que desea resolver esta alerta crítica de telemetría? Esto cambiará el estado de la alerta a RESOLVED y notificará al centro de operaciones que la crisis ha sido atendida."
+        confirmText="Resolver Alerta"
+        type="success"
+      />
+
+      <EntityLookupModal
+        isOpen={lookupState.isOpen}
+        onClose={() => setLookupState({ ...lookupState, isOpen: false })}
+        entityType={lookupState.type}
+        title={lookupState.title}
+        onSelect={handleEntitySelect}
+      />
+
+      {verificationState.target && (
+        <ActionVerificationModal
+          isOpen={verificationState.isOpen}
+          onClose={() => setVerificationState({ ...verificationState, isOpen: false })}
+          onConfirm={executeLinkage}
+          sourceEntity={{ type: 'patient', name: `${patient.first_name} ${patient.last_name}`, subtitle: `ID: ${patient.national_id}` }}
+          targetEntity={{
+            type: verificationState.type === 'devices' ? 'device' : verificationState.type === 'doctors' ? 'doctor' : 'client',
+            name: verificationState.type === 'devices' ? verificationState.target.serial_number :
+                  verificationState.type === 'doctors' ? `${verificationState.target.first_name} ${verificationState.target.last_name}` :
+                  verificationState.target.corporate_name,
+            subtitle: verificationState.type === 'devices' ? `MAC: ${verificationState.target.mac_address}` :
+                      verificationState.type === 'doctors' ? `Lic: ${verificationState.target.medical_license}` :
+                      `Tax ID: ${verificationState.target.tax_id}`
+          }}
+          impactText={verificationState.impactText}
+        />
+      )}
     </div>
   );
 };

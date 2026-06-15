@@ -202,7 +202,7 @@ async def update_doctor(
     if req.is_active is not None:
         update_payload["is_active"] = req.is_active
         # Si se desactiva, bloqueamos el acceso en la colección `users`
-        new_user_status = UserStatus.ACTIVE if req.is_active else UserStatus.SUSPENDED
+        new_user_status = UserStatus.APPROVED if req.is_active else UserStatus.SUSPENDED
         await db_service.db.users.update_one(
             {"_id": ObjectId(doctor["user_id"])},
             {"$set": {"status": new_user_status, "updated_at": datetime.now(timezone.utc)}}

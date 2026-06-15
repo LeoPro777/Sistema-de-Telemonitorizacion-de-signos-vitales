@@ -337,3 +337,82 @@ async def update_device(
     )
 
     return {"message": "Dispositivo actualizado con éxito."}
+
+
+class DeviceCheckInRequest(BaseModel):
+    mac_address: str
+    serial_number: Optional[str] = None
+    model_version: Optional[str] = "V1.0"
+    battery_percent: Optional[int] = 100
+    signal_strength_dbm: Optional[int] = -50
+
+
+@router.post("/check-in")
+async def device_check_in(req: DeviceCheckInRequest):
+    """
+    Check-in público para dispositivos físicos (ESP32).
+    Si no existe por su MAC, se auto-registra en estado PENDING_APPROVAL.
+    Si existe, actualiza sus métricas técnicas y ping.
+    Retorna el estado de aprobación y asignación, y el patient_id para la transmisión.
+    """
+    now = datetime.now(timezone.utc)
+    mac = req.mac_address.strip().upper()
+    
+    device = await db_service.db.devices.find_one({"mac_address": mac})
+    
+    if not device:
+        # Generar un número de serie por defecto si no viene
+        serial = req.serial_number or f"AURA-{mac.replace(':', '')[-6:]}"
+        device_doc = {
+            "serial_number": serial,
+            "mac_address": mac,
+            "model_version": req.model_version,
+            "is_active": True,
+            "approval_status": "PENDING_APPROVAL",
+            "approval_details": {
+                "submitted_at": now,
+                "reviewed_at": None,
+                "reviewed_by": None
+            },
+            "operational_status": "MAINTENANCE",
+            "hardware_metrics": {
+                "battery_percent": req.battery_percent,
+                "signal_strength_dbm": req.signal_strength_dbm,
+                "last_ping_at": now
+            },
+            "has_hardware_alert": False
+        }
+        await db_service.db.devices.insert_one(device_doc)
+        return {
+            "approval_status": "PENDING_APPROVAL",
+            "operational_status": "MAINTENANCE",
+            "patient_id": None,
+            "message": "Dispositivo registrado en el sistema. En espera de aprobación del administrador."
+        }
+        
+    # Si ya existe, actualizar métricas
+    await db_service.db.devices.update_one(
+        {"_id": device["_id"]},
+        {
+            "$set": {
+                "hardware_metrics.battery_percent": req.battery_percent,
+                "hardware_metrics.signal_strength_dbm": req.signal_strength_dbm,
+                "hardware_metrics.last_ping_at": now
+            }
+        }
+    )
+    
+    # Resolver paciente asignado si el estado operacional es ASSIGNED
+    patient_id = None
+    if device.get("operational_status") == "ASSIGNED":
+        patient = await db_service.db.patients.find_one({"assigned_device_id": device["_id"]})
+        if patient:
+            patient_id = str(patient["_id"])
+            
+    return {
+        "approval_status": device.get("approval_status"),
+        "operational_status": device.get("operational_status"),
+        "patient_id": patient_id,
+        "message": "Check-in exitoso."
+    }
+

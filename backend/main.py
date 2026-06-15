@@ -21,6 +21,8 @@ from backend.routes.clients import router as clients_router
 from backend.routes.support import router as support_router
 from backend.routes.profile import router as profile_router
 from backend.routes.reports import router as reports_router
+from backend.routes.audit_logs import router as audit_logs_router
+from backend.services.audit import AuditContextMiddleware
 
 
 async def offline_checker_task():
@@ -29,7 +31,7 @@ async def offline_checker_task():
             now = datetime.now(timezone.utc)
             cutoff_time = now - timedelta(seconds=15)
             # Find and update all patients who are currently marked online but haven't sent data in 15s
-            await db_service.db.patients.update_many(
+            await db_service.raw_db.patients.update_many(
                 {
                     "is_online": True,
                     "$or": [
@@ -91,6 +93,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(AuditContextMiddleware)
 
 # Registro de Enrutadores
 app.include_router(auth_router, prefix="/api")
@@ -105,6 +108,8 @@ app.include_router(support_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
 app.include_router(reports_router, prefix="/api/v1")
+app.include_router(audit_logs_router, prefix="/api")
+app.include_router(audit_logs_router, prefix="/api/v1")
 
 app.include_router(vitals_router) # Registrado sin prefijo para que coincida /ws/vitals y /api/vitals/simulate
 

@@ -6,8 +6,42 @@ import toast from 'react-hot-toast';
 
 export const LoginView: React.FC = () => {
   const navigate = useNavigate();
-  const { isLoading } = useAuthStore();
+  const { isLoading, bypassLogin } = useAuthStore();
   const [searchParams] = useSearchParams();
+  const [bypassEmail, setBypassEmail] = React.useState('');
+
+  const executeBypass = async (email: string) => {
+    try {
+      const res = await bypassLogin(email);
+      toast.success('¡Sesión iniciada con Bypass!');
+      const userStatus = res.user.status;
+      if (userStatus === 'incomplete') {
+        navigate('/register-select', { replace: true });
+      } else if (userStatus === 'pending_approval') {
+        navigate('/waiting-approval', { replace: true });
+      } else if (userStatus === 'approved') {
+        if (res.user.role === 'PATIENT') {
+          navigate('/patient-view', { replace: true });
+        } else if (res.user.role === 'CLIENT' || res.user.role === 'DOCTOR') {
+          navigate('/patients', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    } catch (err: any) {
+      toast.error(typeof err === 'string' ? err : 'Error al iniciar sesión con Bypass.');
+    }
+  };
+
+  const handleBypassSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bypassEmail.trim()) {
+      toast.error('Por favor, ingresa un correo para el bypass.');
+      return;
+    }
+    await executeBypass(bypassEmail);
+  };
+
 
   useEffect(() => {
     const code = searchParams.get('code');
@@ -175,6 +209,59 @@ export const LoginView: React.FC = () => {
                 <span className="text-xs text-slate-500 uppercase font-semibold tracking-wider">Acceso Seguro</span>
                 <div className="flex-1 border-t border-[#1E2640]"></div>
               </div>
+
+              {/* Panel de Bypass en Desarrollo */}
+              {(import.meta as any).env.DEV && (
+                <div className="mt-6 pt-4 border-t border-[#1E2640]/50 space-y-4">
+                  <div className="flex items-center space-x-2 text-[#D4AF37]">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Modo Desarrollo / Bypass</span>
+                  </div>
+                  
+                  <form onSubmit={handleBypassSubmit} className="space-y-3">
+                    <div className="relative">
+                      <input
+                        type="email"
+                        placeholder="ej: doctor@aura.com"
+                        value={bypassEmail}
+                        onChange={(e) => setBypassEmail(e.target.value)}
+                        className="w-full px-4 py-2 bg-[#0F1420] border border-[#1E2640] rounded-xl text-slate-100 placeholder-slate-600 text-xs focus:border-[#D4AF37]/50 focus:outline-none transition-all duration-300"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isProcessing}
+                      className="w-full py-2 bg-gradient-to-r from-[#D4AF37]/20 to-[#AA820A]/20 hover:from-[#D4AF37]/35 hover:to-[#AA820A]/35 text-[#D4AF37] hover:text-white border border-[#D4AF37]/30 font-semibold text-xs rounded-xl transition-all duration-300 shadow-md"
+                    >
+                      Ingresar con Bypass
+                    </button>
+                  </form>
+
+                  <div className="space-y-1.5">
+                    <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">Accesos Rápidos:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { label: 'Admin', email: 'admin@aura.com' },
+                        { label: 'Médico', email: 'medico@aura.com' },
+                        { label: 'Cliente', email: 'cliente@aura.com' },
+                        { label: 'Nuevo (Onboarding)', email: 'nuevo_usuario@aura.com' }
+                      ].map((item) => (
+                        <button
+                          key={item.label}
+                          onClick={() => {
+                            setBypassEmail(item.email);
+                            executeBypass(item.email);
+                          }}
+                          disabled={isProcessing}
+                          className="px-2.5 py-1 bg-[#101626] border border-[#1E2640] hover:border-[#D4AF37]/40 text-slate-400 hover:text-slate-200 text-[10px] font-medium rounded-lg transition-all duration-200"
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Enlace inferior de registro */}

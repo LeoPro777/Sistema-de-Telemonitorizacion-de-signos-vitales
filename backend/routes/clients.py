@@ -200,7 +200,7 @@ async def update_client(
     if req.is_active is not None:
         update_payload["is_active"] = req.is_active
         # Sincronizar suspensión técnica del usuario
-        new_status = UserStatus.ACTIVE if req.is_active else UserStatus.SUSPENDED
+        new_status = UserStatus.APPROVED if req.is_active else UserStatus.SUSPENDED
         await db_service.db.users.update_one(
             {"_id": ObjectId(client["user_id"])},
             {"$set": {"status": new_status, "updated_at": datetime.now(timezone.utc)}}

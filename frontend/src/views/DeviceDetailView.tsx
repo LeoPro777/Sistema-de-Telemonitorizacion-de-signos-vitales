@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { ConfirmationModal } from '../components';
 
 export const DeviceDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,8 @@ export const DeviceDetailView: React.FC = () => {
   const [newFirmware, setNewFirmware] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isConfirmToggleOpen, setIsConfirmToggleOpen] = useState(false);
+  const [isConfirmFirmwareOpen, setIsConfirmFirmwareOpen] = useState(false);
 
   const fetchDeviceDetail = async () => {
     setIsLoading(true);
@@ -36,13 +39,16 @@ export const DeviceDetailView: React.FC = () => {
     }
   }, [id]);
 
-  const handleUpdateFirmware = async (e: React.FormEvent) => {
+  const handleUpdateFirmware = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFirmware.trim()) {
       toast.error('Debe ingresar una versión de firmware válida.');
       return;
     }
-    
+    setIsConfirmFirmwareOpen(true);
+  };
+
+  const executeUpdateFirmware = async () => {
     setIsUpdating(true);
     try {
       await api.put(`/devices/${id}`, {
@@ -360,7 +366,7 @@ export const DeviceDetailView: React.FC = () => {
             </p>
 
             <button
-              onClick={handleToggleActiveState}
+              onClick={() => setIsConfirmToggleOpen(true)}
               disabled={isUpdating}
               className={`w-full py-3 text-xs font-extrabold rounded-xl flex items-center justify-center space-x-2 transition-all uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed ${
                 device.is_active 
@@ -377,6 +383,29 @@ export const DeviceDetailView: React.FC = () => {
 
       </div>
 
+      <ConfirmationModal
+        isOpen={isConfirmToggleOpen}
+        onClose={() => setIsConfirmToggleOpen(false)}
+        onConfirm={handleToggleActiveState}
+        title={device.is_active ? 'Desactivar Hardware' : 'Reactivar Hardware'}
+        message={
+          device.is_active
+            ? `¿Está seguro de que desea desactivar el dispositivo con S/N "${device.serial_number}"? Esto detendrá temporalmente el procesamiento de sus lecturas biométricas en el servidor.`
+            : `¿Está seguro de que desea reactivar el dispositivo con S/N "${device.serial_number}"? Esto volverá a recibir y procesar sus transmisiones biométricas.`
+        }
+        confirmText={device.is_active ? 'Desactivar' : 'Reactivar'}
+        type={device.is_active ? 'danger' : 'success'}
+      />
+
+      <ConfirmationModal
+        isOpen={isConfirmFirmwareOpen}
+        onClose={() => setIsConfirmFirmwareOpen(false)}
+        onConfirm={executeUpdateFirmware}
+        title="Flashear Firmware OTA"
+        message={`¿Está seguro de que desea iniciar el proceso OTA para cargar la versión de firmware "${newFirmware.trim()}" en el dispositivo "${device.serial_number}"? El dispositivo se reiniciará durante el flasheo.`}
+        confirmText="Iniciar Flasheo"
+        type="warning"
+      />
     </div>
   );
 };

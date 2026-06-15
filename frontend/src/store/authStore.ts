@@ -29,6 +29,7 @@ interface AuthState {
   
   // Acciones
   googleLogin: (tokenOrCode: string, isCodeFlow?: boolean) => Promise<any>;
+  bypassLogin: (email: string) => Promise<any>;
   onboarding: (role: UserRole, personalData: any, professionalMetadata: any) => Promise<any>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -68,6 +69,30 @@ export const useAuthStore = create<AuthState>((set) => ({
       const detail = error?.response?.data?.detail;
       if (typeof detail === 'string') throw detail;
       throw error?.message || 'Error al iniciar sesión con Google';
+    }
+  },
+  
+  bypassLogin: async (email) => {
+    set({ isLoading: true });
+    try {
+      const response = await api.post('/auth/bypass-login', { email });
+      const { user } = response.data;
+      
+      localStorage.setItem('aura_logged_in', 'true');
+      
+      set({
+        user: user,
+        isLoggedIn: true,
+        isLoading: false,
+        isInitialized: true,
+      });
+      return { success: true, user };
+    } catch (error: any) {
+      set({ isLoading: false, isLoggedIn: false, user: null, isInitialized: true });
+      localStorage.removeItem('aura_logged_in');
+      const detail = error?.response?.data?.detail;
+      if (typeof detail === 'string') throw detail;
+      throw error?.message || 'Error en Bypass Login';
     }
   },
   

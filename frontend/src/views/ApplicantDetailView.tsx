@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { ConfirmationModal } from '../components';
 
 export const ApplicantDetailView: React.FC = () => {
   const { email } = useParams<{ email: string }>();
@@ -16,6 +17,8 @@ export const ApplicantDetailView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [isConfirmApproveOpen, setIsConfirmApproveOpen] = useState(false);
+  const [isConfirmRejectOpen, setIsConfirmRejectOpen] = useState(false);
 
   // Control de documentos auditados
   const [auditedDocs, setAuditedDocs] = useState<{[key: string]: boolean}>({});
@@ -56,12 +59,7 @@ export const ApplicantDetailView: React.FC = () => {
   // Verificar si al menos un documento ha sido auditado
   const isAnyDocAudited = Object.values(auditedDocs).some(val => val === true);
 
-  const handleReview = async (status: 'APPROVED' | 'REJECTED') => {
-    if (status === 'REJECTED' && !rejectionReason.trim()) {
-      toast.error('Debe ingresar un motivo de rechazo obligatorio.');
-      return;
-    }
-
+  const executeReview = async (status: 'APPROVED' | 'REJECTED') => {
     setIsProcessing(true);
     try {
       await api.post(`/applicants/${email}/review`, {
@@ -392,7 +390,13 @@ export const ApplicantDetailView: React.FC = () => {
                 
                 {/* Botón RECHAZAR: Inhabilitado si no hay justificación en la caja */}
                 <button
-                  onClick={() => handleReview('REJECTED')}
+                  onClick={() => {
+                    if (!rejectionReason.trim()) {
+                      toast.error('Debe ingresar un motivo de rechazo obligatorio.');
+                      return;
+                    }
+                    setIsConfirmRejectOpen(true);
+                  }}
                   disabled={isProcessing || !rejectionReason.trim()}
                   className="py-3.5 bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/35 hover:border-rose-500 text-rose-400 text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition-all uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Escriba la justificación para habilitar el botón"
@@ -403,7 +407,7 @@ export const ApplicantDetailView: React.FC = () => {
 
                 {/* Botón APROBAR: Inhabilitado hasta que se abra al menos un archivo obligatorios */}
                 <button
-                  onClick={() => handleReview('APPROVED')}
+                  onClick={() => setIsConfirmApproveOpen(true)}
                   disabled={isProcessing || !isAnyDocAudited}
                   className="py-3.5 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white border border-emerald-500/35 hover:border-emerald-500 text-emerald-400 text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition-all uppercase tracking-wider disabled:opacity-35 disabled:cursor-not-allowed"
                   title="Abra y audite al menos un documento para habilitar"
@@ -428,6 +432,25 @@ export const ApplicantDetailView: React.FC = () => {
 
       </div>
 
+      <ConfirmationModal
+        isOpen={isConfirmApproveOpen}
+        onClose={() => setIsConfirmApproveOpen(false)}
+        onConfirm={() => executeReview('APPROVED')}
+        title="Aprobar Registro"
+        message={`¿Está seguro de que desea aprobar el registro de ${personal.first_name} ${personal.last_name}? Se creará su cuenta de usuario y se le concederán accesos operativas en AURA en rol de ${applicant.requested_role}.`}
+        confirmText="Aprobar"
+        type="success"
+      />
+
+      <ConfirmationModal
+        isOpen={isConfirmRejectOpen}
+        onClose={() => setIsConfirmRejectOpen(false)}
+        onConfirm={() => executeReview('REJECTED')}
+        title="Rechazar Registro"
+        message={`¿Está seguro de que desea rechazar el registro de ${personal.first_name} ${personal.last_name}? Se suspenderá la solicitud y el motivo de rechazo será registrado.`}
+        confirmText="Rechazar"
+        type="danger"
+      />
     </div>
   );
 };

@@ -4,7 +4,7 @@ echo Iniciando Sistema de Telemonitorización (Dev Mode)
 echo ====================================================
 
 echo [1/2] Levantando Backend (FastAPI)...
-start "Backend - FastAPI" cmd /k "set PYTHONPATH=%cd%&& cd backend && call venv\Scripts\activate && uvicorn main:app --reload --port 8000"
+start "Backend - FastAPI" cmd /k "set PYTHONPATH=%cd%&& cd backend && call venv\Scripts\activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
 
 echo [2/2] Levantando Frontend (Vite)...
 start "Frontend - React" cmd /k "cd frontend && npm run dev"
