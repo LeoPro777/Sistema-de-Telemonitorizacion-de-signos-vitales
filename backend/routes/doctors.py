@@ -127,11 +127,28 @@ async def get_doctor_detail(id: str, current_user: UserResponse = Depends(get_cu
     if doctor.get("user_id"):
         doctor["user_id"] = str(doctor["user_id"])
 
-    # 1. Contar pacientes asignados de forma dinámica y exacta para consistencia eventual
-    active_patients_count = await db_service.db.patients.count_documents({
+    # 1. Obtener la lista tabular de pacientes asignados de forma dinámica
+    patient_cursor = db_service.db.patients.find({
         "assigned_doctor_id": ObjectId(id),
         "is_active": True
     })
+    
+    linked_patients = []
+    active_patients_count = 0
+
+    async for pat in patient_cursor:
+        active_patients_count += 1
+        pat_data = {
+            "id": str(pat["_id"]),
+            "first_name": pat.get("first_name", ""),
+            "last_name": pat.get("last_name", ""),
+            "medical_record_id": pat.get("medical_record_id", ""),
+            "national_id": pat.get("national_id", ""),
+            "is_active": pat.get("is_active", True),
+            "has_active_alert": pat.get("has_active_alert", False),
+            "last_telemetry": pat.get("last_telemetry_cache", {})
+        }
+        linked_patients.append(pat_data)
     
     # Sincronizar el campo en caché por si hay diferencias de concurrencia
     await db_service.db.doctors.update_one(
@@ -140,6 +157,7 @@ async def get_doctor_detail(id: str, current_user: UserResponse = Depends(get_cu
     )
     
     doctor["active_patients_count"] = active_patients_count
+    doctor["patients"] = linked_patients
 
     # 2. Agregar registros de auditoría de actividad del médico desde audit_logs
     # (Mapea logs del motor donde el actor sea el user_id de este doctor)

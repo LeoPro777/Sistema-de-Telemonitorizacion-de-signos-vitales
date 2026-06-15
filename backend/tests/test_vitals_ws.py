@@ -90,11 +90,12 @@ def test_vitals_ws_telemetry(mock_verify):
                 # 6. Esperar el broadcast y verificar las alertas generadas
                 data_crit = websocket.receive_json()
                 assert data_crit["status"] == "CRITICAL"
-                assert len(data_crit["new_alerts"]) == 2
+                assert len(data_crit["new_alerts"]) == 1
                 
-                alert_types = [a["alert_type"] for a in data_crit["new_alerts"]]
-                assert "HEART_RATE_CRITICAL" in alert_types
-                assert "SPO2_CRITICAL" in alert_types
+                alert = data_crit["new_alerts"][0]
+                assert alert["alert_type"] == "MULTIPLE_CRITICAL"
+                assert "Frecuencia cardíaca fuera de rango" in alert["description"]
+                assert "Saturación de oxígeno crítica" in alert["description"]
 
     finally:
         # Limpiar de forma síncrona

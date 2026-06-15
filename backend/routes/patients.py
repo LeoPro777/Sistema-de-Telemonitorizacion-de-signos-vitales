@@ -23,6 +23,7 @@ from backend.services.database import db_service
 from backend.routes.auth import get_current_user
 from backend.models.user import UserResponse, UserRole, TelemetryStatus
 from backend.models.__init__ import PyObjectId
+from backend.routes.dashboard import invalidate_dashboard_kpis
 
 logger = logging.getLogger("app.patients")
 router = APIRouter(prefix="/patients", tags=["Gestión de Pacientes (M4)"])
@@ -137,6 +138,62 @@ async def get_patients(
     }
 
 
+@router.get("/alerts/recent")
+async def get_recent_alerts(
+    status_filter: Optional[str] = Query(None, description="Filtros: ACTIVE, RESOLVED"),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Obtiene las alertas recientes de los pacientes asociados al usuario actual.
+    Administradores ven todo; Doctores ven pacientes asignados; Clientes ven pacientes de su clínica.
+    """
+    patient_query = {}
+    if current_user.role == UserRole.DOCTOR:
+        doctor = await db_service.db.doctors.find_one({"user_id": ObjectId(current_user.id)})
+        if doctor:
+            patient_query["assigned_doctor_id"] = doctor["_id"]
+        else:
+            return []
+    elif current_user.role == UserRole.CLIENT:
+        client = await db_service.db.clients.find_one({"user_id": ObjectId(current_user.id)})
+        if client:
+            patient_query["client_id"] = client["_id"]
+        else:
+            return []
+    elif current_user.role == UserRole.PATIENT:
+        patient_query["user_id"] = ObjectId(current_user.id)
+
+    # Buscar todos los pacientes para armar un mapa de IDs a nombres
+    patients_cursor = db_service.db.patients.find(patient_query, {"_id": 1, "first_name": 1, "last_name": 1})
+    patient_map = {}
+    async for p in patients_cursor:
+        patient_map[p["_id"]] = f"{p.get('first_name', '')} {p.get('last_name', '')}".strip()
+
+    patient_ids = list(patient_map.keys())
+    if not patient_ids:
+        return []
+
+    # Consultar alertas de esos pacientes
+    query = {"patient_id": {"$in": patient_ids}}
+    if status_filter:
+        query["status"] = status_filter
+
+    cursor = db_service.db.alerts.find(query).sort("created_at", -1).limit(limit)
+    alerts_list = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        doc["patient_id"] = str(doc["patient_id"])
+        if doc.get("device_id"):
+            doc["device_id"] = str(doc["device_id"])
+        if doc.get("resolved_by"):
+            doc["resolved_by"] = str(doc["resolved_by"])
+        doc["patient_name"] = patient_map.get(ObjectId(doc["patient_id"]), "Paciente Desconocido")
+        alerts_list.append(doc)
+
+    return alerts_list
+
+
 @router.get("/{id}")
 async def get_patient_detail(id: str, current_user: UserResponse = Depends(get_current_user)):
     """
@@ -246,6 +303,8 @@ async def update_patient(
         return_document=True
     )
 
+    await invalidate_dashboard_kpis(ObjectId(id))
+
     res["_id"] = str(res["_id"])
     if res.get("assigned_doctor_id"):
         res["assigned_doctor_id"] = str(res["assigned_doctor_id"])
@@ -353,6 +412,8 @@ async def resolve_alert(
             detail="Alerta no encontrada o ya resuelta."
         )
 
+    from backend.routes.vitals import manager
+
     # 2. Recalcular si quedan alertas activas para el paciente
     active_alerts_count = await db_service.db.alerts.count_documents({
         "patient_id": ObjectId(id),
@@ -364,6 +425,10 @@ async def resolve_alert(
         {"_id": ObjectId(id)},
         {"$set": {"has_active_alert": has_active}}
     )
+
+    # 3. Notificar globalmente para actualizar dashboards en tiempo real
+    await invalidate_dashboard_kpis(ObjectId(id))
+    await manager.broadcast_global({"type": "ALERTS_CHANGED"})
 
     return {
         "message": "Alerta resuelta con éxito.",

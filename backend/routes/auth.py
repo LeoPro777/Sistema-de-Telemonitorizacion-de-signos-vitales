@@ -537,13 +537,27 @@ async def bypass_login(req: BypassLoginRequest, response: Response):
     user_doc = await db_service.db.users.find_one({"email": req.email})
 
     if not user_doc:
-        # Registrar nuevo usuario en estado INCOMPLETE
+        # Registrar nuevo usuario en estado INCOMPLETE o APPROVED para cuentas especiales de bypass
         user_id = ObjectId()
         google_id = f"mock_{user_id}"
         # Generar nombre y apellido ficticios basados en el email
         parts = req.email.split('@')[0].split('.')
         first_name = parts[0].capitalize()
         last_name = parts[1].capitalize() if len(parts) > 1 else "User"
+        
+        role = None
+        user_status = UserStatus.INCOMPLETE
+        
+        # Mapear roles por defecto para emails de bypass antiguos de aura.com
+        if req.email == "admin@aura.com":
+            role = UserRole.ADMIN
+            user_status = UserStatus.APPROVED
+        elif req.email == "medico@aura.com":
+            role = UserRole.DOCTOR
+            user_status = UserStatus.APPROVED
+        elif req.email == "cliente@aura.com":
+            role = UserRole.CLIENT
+            user_status = UserStatus.APPROVED
         
         user_doc = {
             "_id": user_id,
@@ -552,13 +566,13 @@ async def bypass_login(req: BypassLoginRequest, response: Response):
             "first_name": first_name,
             "last_name": last_name,
             "avatar_url": "https://lh3.googleusercontent.com/a/default-user",
-            "role": None,
-            "status": UserStatus.INCOMPLETE,
+            "role": role,
+            "status": user_status,
             "created_at": now,
             "updated_at": now
         }
         await db_service.db.users.insert_one(user_doc)
-        logger.info(f"[bypass_login] Nuevo usuario registrado vía bypass: {req.email}")
+        logger.info(f"[bypass_login] Nuevo usuario registrado vía bypass: {req.email} con rol {role} y estado {user_status}")
     else:
         # Actualizar updated_at
         await db_service.db.users.update_one(

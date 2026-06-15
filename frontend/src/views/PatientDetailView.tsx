@@ -152,7 +152,7 @@ export const PatientDetailView: React.FC = () => {
     if (!lastDataTimestamp) return;
     const watchdog = setInterval(() => {
       const now = new Date().getTime();
-      if (now - lastDataTimestamp > 15000) {
+      if (now - lastDataTimestamp > 30000) {
         setIsDeviceActive(false);
       }
     }, 2000);
@@ -166,6 +166,8 @@ export const PatientDetailView: React.FC = () => {
       const pRes = await api.get(`/patients/${id}`);
       const pData = pRes.data;
       setPatient(pData);
+      setIsDeviceActive(pData.is_online === true);
+      setLastDataTimestamp(pData.last_telemetry_timestamp ? new Date(pData.last_telemetry_timestamp).getTime() : null);
 
       if (pData.assigned_doctor_id) {
         api.get(`/doctors/${pData.assigned_doctor_id}`).then(res => setDoctorName(`Dr. ${res.data.first_name} ${res.data.last_name}`)).catch(() => setDoctorName('Desconocido'));
@@ -310,9 +312,14 @@ export const PatientDetailView: React.FC = () => {
           };
         });
 
+        if (message.alerts_resolved) {
+          toast.dismiss('critical-alert-toast');
+          api.get(`/patients/${id}/alerts`).then((res) => setAlerts(res.data));
+        }
+
         if (new_alerts && new_alerts.length > 0) {
           api.get(`/patients/${id}/alerts`).then((res) => setAlerts(res.data));
-          toast.error('¡Se ha disparado una alerta biométrica crítica!', { icon: '🚨' });
+          toast.error('¡Se ha disparado una alerta biométrica crítica!', { id: 'critical-alert-toast', icon: '🚨' });
         }
       },
       onConnect: () => {},
@@ -1483,7 +1490,8 @@ export const PatientDetailView: React.FC = () => {
                   <select
                     value={bloodType}
                     onChange={(e) => setBloodType(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-slate-200 sm:col-span-3 text-xs"
+                    disabled={user?.role === 'CLIENT'}
+                    className={`w-full px-3 py-2 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-slate-200 sm:col-span-3 text-xs ${user?.role === 'CLIENT' ? 'opacity-60 cursor-not-allowed' : 'focus:border-[#D4AF37]'}`}
                   >
                     <option value="A+">A Positivo (A+)</option>
                     <option value="A-">A Negativo (A-)</option>
@@ -1504,8 +1512,9 @@ export const PatientDetailView: React.FC = () => {
                       type="text"
                       value={pathologiesText}
                       onChange={(e) => setPathologiesText(e.target.value)}
+                      disabled={user?.role === 'CLIENT'}
                       placeholder="Hipertensión, Asma, Diabetes (separar por comas)"
-                      className="w-full px-3.5 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-xs"
+                      className={`w-full px-3.5 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-xs ${user?.role === 'CLIENT' ? 'opacity-60 cursor-not-allowed' : 'focus:border-[#D4AF37]'}`}
                     />
                     <span className="text-[9px] text-slate-500 italic block font-sans">* Ingrese términos separados por coma.</span>
                   </div>
@@ -1519,8 +1528,9 @@ export const PatientDetailView: React.FC = () => {
                       type="text"
                       value={allergiesText}
                       onChange={(e) => setAllergiesText(e.target.value)}
+                      disabled={user?.role === 'CLIENT'}
                       placeholder="Penicilina, Nueces, Mariscos (separar por comas)"
-                      className="w-full px-3.5 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-xs"
+                      className={`w-full px-3.5 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-xs ${user?.role === 'CLIENT' ? 'opacity-60 cursor-not-allowed' : 'focus:border-[#D4AF37]'}`}
                     />
                   </div>
                 </div>
@@ -1531,30 +1541,33 @@ export const PatientDetailView: React.FC = () => {
                   <textarea
                     value={notesText}
                     onChange={(e) => setNotesText(e.target.value)}
+                    disabled={user?.role === 'CLIENT'}
                     placeholder="Notas médicas, indicaciones sobre el tratamiento..."
                     rows={4}
-                    className="w-full px-3.5 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl focus:border-[#D4AF37] outline-none text-slate-200 placeholder:text-slate-600 resize-none sm:col-span-3 text-xs font-sans"
+                    className={`w-full px-3.5 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-slate-200 placeholder:text-slate-600 resize-none sm:col-span-3 text-xs font-sans ${user?.role === 'CLIENT' ? 'opacity-60 cursor-not-allowed' : 'focus:border-[#D4AF37]'}`}
                   />
                 </div>
               </div>
 
               {/* Botón de guardado de Ficha */}
-              <div className="border-t border-[#1E2640]/50 pt-4 flex justify-end">
-                <button
-                  onClick={handleSaveClinicalHistory}
-                  disabled={isSaving}
-                  className="px-6 py-2.5 bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black font-semibold text-xs text-[#D4AF37] border border-[#D4AF37]/20 hover:border-[#D4AF37] rounded-xl flex items-center space-x-2 transition-all"
-                >
-                  {isSaving ? (
-                    <div className="w-4 h-4 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      <span>Actualizar Ficha Técnica</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              {user?.role !== 'CLIENT' && (
+                <div className="border-t border-[#1E2640]/50 pt-4 flex justify-end">
+                  <button
+                    onClick={handleSaveClinicalHistory}
+                    disabled={isSaving}
+                    className="px-6 py-2.5 bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black font-semibold text-xs text-[#D4AF37] border border-[#D4AF37]/20 hover:border-[#D4AF37] rounded-xl flex items-center space-x-2 transition-all"
+                  >
+                    {isSaving ? (
+                      <div className="w-4 h-4 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        <span>Actualizar Ficha Técnica</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
             </div>
           )}

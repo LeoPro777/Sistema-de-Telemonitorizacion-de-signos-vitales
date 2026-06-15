@@ -98,7 +98,7 @@ export const PatientsView: React.FC = () => {
               ...prev,
               [patient._id]: { ...(prev[patient._id] || {}), isDeviceActive: false }
             }));
-          }, 15000); // 15 segundos sin datos = Inactivo (Gris)
+          }, 30000); // 30 segundos sin datos = Inactivo (Gris)
           
           if (inst) inst.timeoutId = newTimeoutId;
         };

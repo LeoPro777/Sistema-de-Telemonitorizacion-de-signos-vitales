@@ -17,6 +17,7 @@ from backend.services.auth_utils import unsign_session_id
 from backend.models.user import TelemetryStatus
 from backend.models.applicant import ApprovalStatus
 from backend.config import settings
+from backend.routes.dashboard import invalidate_dashboard_kpis
 
 logger = logging.getLogger("app.vitals")
 router = APIRouter(prefix="", tags=["Monitoreo en Tiempo Real (M3 & M4)"])
@@ -25,6 +26,7 @@ router = APIRouter(prefix="", tags=["Monitoreo en Tiempo Real (M3 & M4)"])
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, Set[WebSocket]] = {}
+        self.global_connections: Set[WebSocket] = set()
 
     async def connect(self, patient_id: str, websocket: WebSocket):
         await websocket.accept()
@@ -55,7 +57,31 @@ class ConnectionManager:
             for ws in dead_sockets:
                 self.active_connections[patient_id].discard(ws)
 
+    async def broadcast_global(self, message: dict):
+        """
+        Envía una trama a los webSockets globales (ej. Dashboard).
+        """
+        dead_sockets = set()
+        for ws in self.global_connections:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                dead_sockets.add(ws)
+        self.global_connections.difference_update(dead_sockets)
+
 manager = ConnectionManager()
+
+@router.websocket("/ws/global-alerts")
+async def ws_global_alerts_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    manager.global_connections.add(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except Exception:
+        manager.global_connections.discard(websocket)
 
 # Caché en memoria para limitar la ingesta a 1 dato cada 10 segundos por paciente
 last_telemetry_time: Dict[str, datetime] = {}
@@ -256,31 +282,66 @@ async def ws_vitals_endpoint(websocket: WebSocket, patient_id: str):
                             }
                         )
                         
-                        # Crear alertas en la colección alerts
+                        # Crear/actualizar alerta en la colección alerts de forma consolidada
                         created_alerts = []
-                        for alert in alerts_to_create:
-                            alert_doc = {
-                                "_id": ObjectId(),
-                                "patient_id": ObjectId(patient_id),
-                                "device_id": patient.get("assigned_device_id"),
-                                "alert_type": alert["type"],
-                                "severity": "CRITICAL",
-                                "description": alert["desc"],
-                                "trigger_value": alert["value"],
-                                "status": "ACTIVE",
-                                "created_at": now,
-                                "resolved_at": None,
-                                "resolved_by": None
-                            }
-                            await db_service.db.alerts.insert_one(alert_doc)
+                        alerts_resolved = False
+                        if alerts_to_create:
+                            combined_desc = " | ".join([a["desc"] for a in alerts_to_create])
+                            alert_type = "MULTIPLE_CRITICAL" if len(alerts_to_create) > 1 else alerts_to_create[0]["type"]
                             
-                            alert_doc["_id"] = str(alert_doc["_id"])
-                            alert_doc["patient_id"] = str(alert_doc["patient_id"])
-                            if alert_doc["device_id"]:
-                                alert_doc["device_id"] = str(alert_doc["device_id"])
-                            if isinstance(alert_doc["created_at"], datetime):
-                                alert_doc["created_at"] = alert_doc["created_at"].isoformat()
-                            created_alerts.append(alert_doc)
+                            active_alert = await db_service.db.alerts.find_one({
+                                "patient_id": ObjectId(patient_id),
+                                "status": "ACTIVE"
+                            })
+                            
+                            if active_alert:
+                                await db_service.db.alerts.update_one(
+                                    {"_id": active_alert["_id"]},
+                                    {
+                                        "$set": {
+                                            "alert_type": alert_type,
+                                            "description": combined_desc,
+                                            "trigger_value": float(alerts_to_create[0]["value"]),
+                                            "created_at": now
+                                        }
+                                    }
+                                )
+                                # No añadimos a created_alerts para no saturar las notificaciones emergentes
+                            else:
+                                alert_doc = {
+                                    "_id": ObjectId(),
+                                    "patient_id": ObjectId(patient_id),
+                                    "device_id": patient.get("assigned_device_id"),
+                                    "alert_type": alert_type,
+                                    "severity": "CRITICAL",
+                                    "description": combined_desc,
+                                    "trigger_value": float(alerts_to_create[0]["value"]),
+                                    "status": "ACTIVE",
+                                    "created_at": now,
+                                    "resolved_at": None,
+                                    "resolved_by": None
+                                }
+                                await db_service.db.alerts.insert_one(alert_doc)
+                            
+                                alert_doc["_id"] = str(alert_doc["_id"])
+                                alert_doc["patient_id"] = str(alert_doc["patient_id"])
+                                if alert_doc.get("device_id"):
+                                    alert_doc["device_id"] = str(alert_doc["device_id"])
+                                if isinstance(alert_doc.get("created_at"), datetime):
+                                    alert_doc["created_at"] = alert_doc["created_at"].isoformat()
+                                created_alerts.append(alert_doc)
+                        else:
+                            # Auto-resolver alertas activas si los signos vitales volvieron a la normalidad
+                            res = await db_service.db.alerts.update_many(
+                                {"patient_id": ObjectId(patient_id), "status": "ACTIVE"},
+                                {"$set": {"status": "RESOLVED", "resolved_at": now, "resolved_by": "SYSTEM"}}
+                            )
+                            if res.modified_count > 0:
+                                alerts_resolved = True
+                        
+                        if len(created_alerts) > 0 or alerts_resolved:
+                            await invalidate_dashboard_kpis(ObjectId(patient_id))
+                            await manager.broadcast_global({"event": "ALERTS_CHANGED"})
                         
                         # Preparar paquete de transmisión
                         stream_payload = {
@@ -289,7 +350,8 @@ async def ws_vitals_endpoint(websocket: WebSocket, patient_id: str):
                             "telemetry": telemetry_data,
                             "status": overall_status,
                             "cache": last_telemetry_cache,
-                            "new_alerts": created_alerts
+                            "new_alerts": created_alerts,
+                            "alerts_resolved": alerts_resolved
                         }
                         
                         # Publicar en Redis Pub/Sub
@@ -383,30 +445,65 @@ async def simulate_vital_signs(patient_id: str, payload: TelemetryPayload):
         }
     )
 
-    # 5. Si se detectó anomalía crítica, crear las alertas en la colección alerts
+    # 5. Si se detectó anomalía crítica, crear/actualizar la alerta en la colección alerts de forma consolidada
     created_alerts = []
-    for alert in alerts_to_create:
-        alert_doc = {
-            "_id": ObjectId(),
-            "patient_id": ObjectId(patient_id),
-            "device_id": patient.get("assigned_device_id"),
-            "alert_type": alert["type"],
-            "severity": "CRITICAL",
-            "description": alert["desc"],
-            "trigger_value": alert["value"],
-            "status": "ACTIVE",
-            "created_at": now,
-            "resolved_at": None,
-            "resolved_by": None
-        }
-        await db_service.db.alerts.insert_one(alert_doc)
+    alerts_resolved = False
+    if alerts_to_create:
+        combined_desc = " | ".join([a["desc"] for a in alerts_to_create])
+        alert_type = "MULTIPLE_CRITICAL" if len(alerts_to_create) > 1 else alerts_to_create[0]["type"]
         
-        # Formatear el ID de alert para retornarlo
-        alert_doc["_id"] = str(alert_doc["_id"])
-        alert_doc["patient_id"] = str(alert_doc["patient_id"])
-        if alert_doc["device_id"]:
-            alert_doc["device_id"] = str(alert_doc["device_id"])
-        created_alerts.append(alert_doc)
+        active_alert = await db_service.db.alerts.find_one({
+            "patient_id": ObjectId(patient_id),
+            "status": "ACTIVE"
+        })
+        
+        if active_alert:
+            await db_service.db.alerts.update_one(
+                {"_id": active_alert["_id"]},
+                {
+                    "$set": {
+                        "alert_type": alert_type,
+                        "description": combined_desc,
+                        "trigger_value": float(alerts_to_create[0]["value"]),
+                        "created_at": now
+                    }
+                }
+            )
+        else:
+            alert_doc = {
+                "_id": ObjectId(),
+                "patient_id": ObjectId(patient_id),
+                "device_id": patient.get("assigned_device_id"),
+                "alert_type": alert_type,
+                "severity": "CRITICAL",
+                "description": combined_desc,
+                "trigger_value": float(alerts_to_create[0]["value"]),
+                "status": "ACTIVE",
+                "created_at": now,
+                "resolved_at": None,
+                "resolved_by": None
+            }
+            await db_service.db.alerts.insert_one(alert_doc)
+        
+            alert_doc["_id"] = str(alert_doc["_id"])
+            alert_doc["patient_id"] = str(alert_doc["patient_id"])
+            if alert_doc.get("device_id"):
+                alert_doc["device_id"] = str(alert_doc["device_id"])
+            if isinstance(alert_doc.get("created_at"), datetime):
+                alert_doc["created_at"] = alert_doc["created_at"].isoformat()
+            created_alerts.append(alert_doc)
+    else:
+        # Auto-resolver alertas activas si los signos vitales volvieron a la normalidad
+        res = await db_service.db.alerts.update_many(
+            {"patient_id": ObjectId(patient_id), "status": "ACTIVE"},
+            {"$set": {"status": "RESOLVED", "resolved_at": now, "resolved_by": "SYSTEM"}}
+        )
+        if res.modified_count > 0:
+            alerts_resolved = True
+
+    if len(created_alerts) > 0 or alerts_resolved:
+        await invalidate_dashboard_kpis(ObjectId(patient_id))
+        await manager.broadcast_global({"event": "ALERTS_CHANGED"})
 
     # 6. Preparar paquete de transmisión
     stream_payload = {
@@ -415,7 +512,8 @@ async def simulate_vital_signs(patient_id: str, payload: TelemetryPayload):
         "telemetry": telemetry_data,
         "status": overall_status,
         "cache": last_telemetry_cache,
-        "new_alerts": created_alerts
+        "new_alerts": created_alerts,
+        "alerts_resolved": alerts_resolved
     }
 
     # 7. Publicar en Redis Pub/Sub

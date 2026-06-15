@@ -56,17 +56,6 @@ export const ClientsView: React.FC = () => {
     toast.success(`Consola alternada a vista de ${nextView === 'CARDS' ? 'Tarjetas' : 'Tabla'}`);
   };
 
-  const getContractHealthColor = (percent: number) => {
-    if (percent > 80) return 'text-emerald-400';
-    if (percent > 50) return 'text-amber-400';
-    return 'text-[#FF1744]';
-  };
-
-  const getContractBarColor = (percent: number) => {
-    if (percent > 80) return 'bg-emerald-400';
-    if (percent > 50) return 'bg-amber-400';
-    return 'bg-[#FF1744] animate-pulse';
-  };
 
   return (
     <div className="space-y-6">
@@ -203,25 +192,9 @@ export const ClientsView: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Barra de progreso de Salud Contrato */}
+                    {/* Métricas del Cliente */}
                     <div className="my-6 space-y-2 border-y border-[#1E2640]/50 py-4 font-mono">
                       
-                      {/* Barra 1: Contrato */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-500 font-bold uppercase tracking-wider">Salud Contrato</span>
-                          <strong className={getContractHealthColor(cache.contract_health_percent)}>
-                            {cache.contract_health_percent}%
-                          </strong>
-                        </div>
-                        <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${getContractBarColor(cache.contract_health_percent)}`}
-                            style={{ width: `${cache.contract_health_percent}%` }}
-                          />
-                        </div>
-                      </div>
-
                       {/* Barra 2: Pacientes vinculados */}
                       <div className="flex justify-between items-center text-[10px] pt-1">
                         <span className="text-slate-500 font-bold uppercase tracking-wider">Pacientes Fondeados</span>
@@ -255,7 +228,6 @@ export const ClientsView: React.FC = () => {
                       <th className="py-4 px-6 text-center">TAX ID Fiscal</th>
                       <th className="py-4 px-6 text-center">Tipo Fondeo</th>
                       <th className="py-4 px-6 text-center">Pacientes Activos</th>
-                      <th className="py-4 px-6 text-center">Salud Contrato</th>
                       <th className="py-4 px-6 text-center">Alertas Clínicas</th>
                       <th className="py-4 px-6 text-right">Acción</th>
                     </tr>
@@ -311,14 +283,7 @@ export const ClientsView: React.FC = () => {
                             <span>{cache.assigned_patients_count}</span>
                           </td>
 
-                          {/* Col 5: Contract Health */}
-                          <td className="py-4 px-6 text-center font-bold">
-                            <span className={getContractHealthColor(cache.contract_health_percent)}>
-                              {cache.contract_health_percent}%
-                            </span>
-                          </td>
-
-                          {/* Col 6: Alertas Clínicas */}
+                          {/* Col 5: Alertas Clínicas */}
                           <td className="py-4 px-6 text-center">
                             {isActive && hasAlert ? (
                               <span className="px-2 py-0.5 rounded-full bg-[#FF1744]/25 text-[#FF1744] border border-[#FF1744]/45 text-[9px] font-extrabold tracking-wider animate-pulse flex items-center justify-center space-x-1 w-20 mx-auto">

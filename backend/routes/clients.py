@@ -98,11 +98,37 @@ async def get_client_detail(id: str, current_user: UserResponse = Depends(get_cu
     Retorna la ficha técnica y de contacto detallada de un cliente.
     Resuelve reactivamente la lista de pacientes asociados consultando la colección `patients`.
     """
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.CLIENT]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acceso denegado."
         )
+
+    # Si es Doctor o Cliente (no es Admin), verificar vinculación
+    if current_user.role != UserRole.ADMIN:
+        if current_user.role == UserRole.CLIENT:
+            client = await db_service.db.clients.find_one({"user_id": ObjectId(current_user.id)})
+            if not client or client["_id"] != ObjectId(id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Acceso denegado al cliente."
+                )
+        elif current_user.role == UserRole.DOCTOR:
+            doctor = await db_service.db.doctors.find_one({"user_id": ObjectId(current_user.id)})
+            if not doctor:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Acceso denegado."
+                )
+            patient = await db_service.db.patients.find_one({
+                "assigned_doctor_id": doctor["_id"],
+                "client_id": ObjectId(id)
+            })
+            if not patient:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Acceso denegado al cliente."
+                )
 
     client = await db_service.db.clients.find_one({"_id": ObjectId(id)})
     if not client:

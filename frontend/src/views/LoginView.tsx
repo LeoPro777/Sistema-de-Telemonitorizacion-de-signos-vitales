@@ -238,13 +238,13 @@ export const LoginView: React.FC = () => {
                   </form>
 
                   <div className="space-y-1.5">
-                    <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">Accesos Rápidos:</p>
+                    <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">Accesos Rápidos (Semilla):</p>
                     <div className="flex flex-wrap gap-2">
                       {[
-                        { label: 'Admin', email: 'admin@aura.com' },
-                        { label: 'Médico', email: 'medico@aura.com' },
-                        { label: 'Cliente', email: 'cliente@aura.com' },
-                        { label: 'Nuevo (Onboarding)', email: 'nuevo_usuario@aura.com' }
+                        { label: 'Admin', email: 'admin@telemonitor.com' },
+                        { label: 'Médico', email: 'lopez@clinic.com' },
+                        { label: 'Cliente', email: 'contacto@central.com' },
+                        { label: 'Nuevo (Onboarding)', email: 'nuevo@aura.com' }
                       ].map((item) => (
                         <button
                           key={item.label}

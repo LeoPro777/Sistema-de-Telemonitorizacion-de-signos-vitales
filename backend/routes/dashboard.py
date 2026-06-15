@@ -124,77 +124,50 @@ async def calculate_live_kpis(user_id: ObjectId, role: UserRole) -> Dict[str, An
     now = datetime.now(timezone.utc)
     
     if role == UserRole.ADMIN:
-        # 1. Pacientes Activos
-        total_patients = await db_service.db.patients.count_documents({"is_active": True})
+        # 1. Clientes Activos
+        active_clients = await db_service.db.clients.count_documents({"is_active": True})
         
-        # 2. Dispositivos en red asignados y activos
-        active_devices = await db_service.db.devices.count_documents({
-            "is_active": True,
-            "approval_status": "APPROVED",
-            "operational_status": "ASSIGNED"
-        })
+        # 2. Pacientes Activos
+        active_patients = await db_service.db.patients.count_documents({"is_active": True})
         
-        # 3. Aspirantes pendientes
-        pending_applicants = await db_service.db.applicants.count_documents({"status": "PENDING_APPROVAL"})
+        # 3. Doctores Activos
+        active_doctors = await db_service.db.doctors.count_documents({"is_active": True})
         
-        # 4. Alertas críticas activas
-        critical_alerts_count = await db_service.db.alerts.count_documents({"status": "ACTIVE"})
-        
-        # 5. Throughput de FastAPI (flujo de telemetría simulado en RPS)
-        import random
-        throughput_rps = random.randint(110, 150)
-        system_status_percent = 99.8
-        
-        # 6. Uptime simulado en base al timestamp
-        uptime_seconds = 432000 + int(now.timestamp() % 3600)
-        
-        # 7. Curva de velocidad de ingesta (6 puntos de datos para el Recharts de admin)
-        server_throughput_history = []
-        base_time = now - timedelta(hours=1)
-        for i in range(6):
-            t_point = base_time + timedelta(minutes=10 * i)
-            server_throughput_history.append({
-                "time": t_point.strftime("%H:%M"),
-                "rps": 100 + (i * 8) + random.randint(-5, 5),
-                "redis_load": 10 + (i * 2) + random.randint(-2, 2)
-            })
+        # 4. Dispositivos Activos
+        active_devices = await db_service.db.devices.count_documents({"is_active": True})
+
+        # 5. Obtener lista de aspirantes pendientes (para el panel reducido)
+        pending_list = []
+        cursor = db_service.db.applicants.find({"status": "PENDING_APPROVAL"}).limit(10)
+        async for doc in cursor:
+            doc["_id"] = str(doc["_id"])
+            if "submitted_at" in doc and isinstance(doc["submitted_at"], datetime):
+                doc["submitted_at"] = doc["submitted_at"].isoformat()
+            pending_list.append(doc)
             
-        # 8. Mapeo de alertas técnicas (has_hardware_alert)
-        battery_alert_count = await db_service.db.devices.count_documents({"is_active": True, "has_hardware_alert": True, "hardware_metrics.battery_percent": {"$lt": 20}})
-        wifi_alert_count = await db_service.db.devices.count_documents({"is_active": True, "has_hardware_alert": True, "hardware_metrics.signal_strength_dbm": {"$lt": -80}})
-        handshake_alert_count = await db_service.db.devices.count_documents({"is_active": True, "has_hardware_alert": True, "hardware_metrics.last_ping_at": {"$lt": now - timedelta(hours=1)}})
+        pending_applicants_count = await db_service.db.applicants.count_documents({"status": "PENDING_APPROVAL"})
         
-        # Fallbacks estéticos
-        if battery_alert_count == 0 and wifi_alert_count == 0 and handshake_alert_count == 0:
-            battery_alert_count = 1
-            wifi_alert_count = 2
-            handshake_alert_count = 0
-            
-        hardware_issues = [
-            {"issue": "Baja Batería", "count": battery_alert_count},
-            {"issue": "Desconexiones Wi-Fi", "count": wifi_alert_count},
-            {"issue": "Reintentos Handshake", "count": handshake_alert_count}
-        ]
+        # 6. Alertas críticas activas totales
+        active_alerts_count = await db_service.db.alerts.count_documents({"status": "ACTIVE"})
         
         return {
-            "total_patients": total_patients,
+            "active_clients": active_clients,
+            "active_patients": active_patients,
+            "active_doctors": active_doctors,
             "active_devices": active_devices,
-            "pending_applicants": pending_applicants,
-            "critical_alerts_count": critical_alerts_count,
-            "system_status_percent": system_status_percent,
-            "throughput_rps": throughput_rps,
-            "uptime_seconds": uptime_seconds,
-            "server_throughput_history": server_throughput_history,
-            "hardware_issues": hardware_issues
+            "pending_applicants_count": pending_applicants_count,
+            "pending_applicants_list": pending_list,
+            "critical_alerts_count": active_alerts_count
         }
         
     elif role == UserRole.DOCTOR:
         doctor = await db_service.db.doctors.find_one({"user_id": user_id})
         if not doctor:
             return {
-                "my_patients": 0, "active_alerts": 0, "resolved_today": 0, "alerts_week_count": 0,
-                "critical_patients_count": 0, "stability_rate_percent": 100.0,
-                "biometric_trends": [], "criticality_distribution": []
+                "my_patients": 0,
+                "critical_patients_count": 0,
+                "critical_patients_details": [],
+                "critical_alerts_count": 0
             }
             
         doctor_id = doctor["_id"]
@@ -205,151 +178,61 @@ async def calculate_live_kpis(user_id: ObjectId, role: UserRole) -> Dict[str, An
             assigned_patients.append(p)
             
         my_patients = len(assigned_patients)
-        patient_ids = [p["_id"] for p in assigned_patients]
         
-        # Alertas activas
-        active_alerts = await db_service.db.alerts.count_documents({
+        # Obtener detalles de pacientes críticos
+        critical_patients_details = []
+        async for p in db_service.db.patients.find({
+            "assigned_doctor_id": doctor_id,
+            "is_active": True,
+            "has_active_alert": True
+        }):
+            device_info = None
+            if p.get("assigned_device_id"):
+                dev = await db_service.db.devices.find_one({"_id": p["assigned_device_id"]})
+                if dev:
+                    device_info = {
+                        "serial_number": dev.get("serial_number", ""),
+                        "mac_address": dev.get("mac_address", ""),
+                        "battery_percent": dev.get("hardware_metrics", {}).get("battery_percent", 100),
+                        "signal_strength_dbm": dev.get("hardware_metrics", {}).get("signal_strength_dbm", -50)
+                    }
+            
+            critical_patients_details.append({
+                "id": str(p["_id"]),
+                "first_name": p.get("first_name", ""),
+                "last_name": p.get("last_name", ""),
+                "medical_record_id": p.get("medical_record_id", ""),
+                "last_telemetry_cache": p.get("last_telemetry_cache"),
+                "device_info": device_info
+            })
+            
+        critical_patients_count = len(critical_patients_details)
+        
+        # Alertas críticas activas reales para los pacientes de este doctor
+        patient_ids = [ObjectId(p["id"]) for p in critical_patients_details]
+        active_alerts_count = await db_service.db.alerts.count_documents({
             "patient_id": {"$in": patient_ids},
             "status": "ACTIVE"
         })
         
-        # Pacientes críticos
-        critical_patients_count = await db_service.db.patients.count_documents({
-            "assigned_doctor_id": doctor_id,
-            "is_active": True,
-            "has_active_alert": True
-        })
-        
-        # Resueltas hoy (últimas 24h)
-        resolved_today = await db_service.db.alerts.count_documents({
-            "patient_id": {"$in": patient_ids},
-            "status": "RESOLVED",
-            "resolved_at": {"$gte": now - timedelta(days=1)}
-        })
-        
-        # Alertas de la semana
-        alerts_week_count = await db_service.db.alerts.count_documents({
-            "patient_id": {"$in": patient_ids},
-            "created_at": {"$gte": now - timedelta(days=7)}
-        })
-        
-        # Estabilidad del clúster
-        if my_patients > 0:
-            stable_count = my_patients - critical_patients_count
-            stability_rate_percent = round((stable_count / my_patients) * 100, 1)
-        else:
-            stability_rate_percent = 100.0
-            
-        # Tendencias Biométricas promedio de 6 horas
-        biometric_trends = []
-        if patient_ids:
-            six_hours_ago = now - timedelta(hours=6)
-            pipeline = [
-                {"$match": {"patient_id": {"$in": patient_ids}, "timestamp": {"$gte": six_hours_ago}}},
-                {"$group": {
-                    "_id": {
-                        "hour": {"$hour": "$timestamp"},
-                        "minute": {
-                            "$subtract": [
-                                {"$minute": "$timestamp"},
-                                {"$mod": [{"$minute": "$timestamp"}, 60]}
-                            ]
-                        }
-                    },
-                    "avg_hr": {"$avg": "$telemetry.heart_rate"},
-                    "avg_spo2": {"$avg": "$telemetry.spo2"},
-                    "avg_temp": {"$avg": "$telemetry.temperature"},
-                    "timestamp": {"$first": "$timestamp"}
-                }},
-                {"$sort": {"timestamp": 1}}
-            ]
-            cursor = db_service.db.vital_signs_history.aggregate(pipeline)
-            async for doc in cursor:
-                biometric_trends.append({
-                    "time": doc["timestamp"].strftime("%H:%M"),
-                    "heart_rate": round(doc["avg_hr"], 1) if doc["avg_hr"] else 75.0,
-                    "spo2": round(doc["avg_spo2"], 1) if doc["avg_spo2"] else 98.0,
-                    "temperature": round(doc["avg_temp"], 1) if doc["avg_temp"] else 36.6
-                })
-                
-        if len(biometric_trends) < 2:
-            import random
-            biometric_trends = []
-            base_time = now - timedelta(hours=6)
-            for i in range(6):
-                t_point = base_time + timedelta(hours=i)
-                biometric_trends.append({
-                    "time": t_point.strftime("%H:%M"),
-                    "heart_rate": round(72.0 + random.uniform(-3, 5), 1),
-                    "spo2": round(97.5 + random.uniform(-0.5, 1.5), 1),
-                    "temperature": round(36.4 + random.uniform(-0.2, 0.4), 1)
-                })
-                
-        # Distribución de criticidad por patología
-        pathologies_map = {"Cardiopatía": {"NORMAL": 0, "WARNING": 0, "CRITICAL": 0},
-                           "Diabetes": {"NORMAL": 0, "WARNING": 0, "CRITICAL": 0},
-                           "General": {"NORMAL": 0, "WARNING": 0, "CRITICAL": 0}}
-                           
-        for p in assigned_patients:
-            pathologies = p.get("medical_history_summary", {}).get("pathologies", [])
-            primary_pathology = "General"
-            if pathologies:
-                if any(x in pathologies[0] for x in ["Hipertensión", "Cardiopatía", "Corazón"]):
-                    primary_pathology = "Cardiopatía"
-                elif "Diabetes" in pathologies[0]:
-                    primary_pathology = "Diabetes"
-                    
-            status_val = "NORMAL"
-            if p.get("has_active_alert"):
-                status_val = "CRITICAL"
-            else:
-                cache = p.get("last_telemetry_cache", {})
-                for k, v in cache.items():
-                    if isinstance(v, dict) and v.get("status") == "WARNING":
-                        status_val = "WARNING"
-                        break
-                        
-            pathologies_map[primary_pathology][status_val] += 1
-            
-        criticality_distribution = []
-        for path_name, counts in pathologies_map.items():
-            criticality_distribution.append({
-                "group": path_name,
-                "NORMAL": counts["NORMAL"],
-                "WARNING": counts["WARNING"],
-                "CRITICAL": counts["CRITICAL"]
-            })
-            
-        has_counts = any(c["NORMAL"] > 0 or c["WARNING"] > 0 or c["CRITICAL"] > 0 for c in criticality_distribution)
-        if not has_counts:
-            criticality_distribution = [
-                {"group": "Cardiopatía", "NORMAL": 3, "WARNING": 1, "CRITICAL": 0},
-                {"group": "Diabetes", "NORMAL": 5, "WARNING": 0, "CRITICAL": 1},
-                {"group": "General", "NORMAL": 4, "WARNING": 1, "CRITICAL": 0}
-            ]
-            
         return {
             "my_patients": my_patients,
-            "active_alerts": active_alerts,
-            "resolved_today": resolved_today,
-            "alerts_week_count": alerts_week_count,
             "critical_patients_count": critical_patients_count,
-            "stability_rate_percent": stability_rate_percent,
-            "biometric_trends": biometric_trends,
-            "criticality_distribution": criticality_distribution
+            "critical_patients_details": critical_patients_details,
+            "critical_alerts_count": active_alerts_count
         }
         
     elif role == UserRole.CLIENT:
         client = await db_service.db.clients.find_one({"user_id": user_id})
         if not client:
             return {
-                "client_patients": 0, "funded_patients_count": 0, "deployed_devices_count": 0,
-                "critical_alerts": 0, "contract_health": 100, "total_clinical_sites": 1,
-                "patient_device_list": [], "device_operational_status": [], "incident_history": []
+                "client_patients": 0,
+                "critical_patients_count": 0,
+                "critical_patients_details": [],
+                "critical_alerts_count": 0
             }
             
         client_id = client["_id"]
-        contract_health = client.get("summary_cache", {}).get("contract_health_percent", 100)
         
         # Pacientes
         funded_patients = []
@@ -357,91 +240,52 @@ async def calculate_live_kpis(user_id: ObjectId, role: UserRole) -> Dict[str, An
             funded_patients.append(p)
             
         client_patients = len(funded_patients)
-        patient_ids = [p["_id"] for p in funded_patients]
-        device_ids = [p["assigned_device_id"] for p in funded_patients if p.get("assigned_device_id")]
         
-        deployed_devices_count = len(device_ids)
+        # Obtener detalles de pacientes críticos
+        critical_patients_details = []
+        async for p in db_service.db.patients.find({
+            "client_id": client_id,
+            "is_active": True,
+            "has_active_alert": True
+        }):
+            device_info = None
+            if p.get("assigned_device_id"):
+                dev = await db_service.db.devices.find_one({"_id": p["assigned_device_id"]})
+                if dev:
+                    device_info = {
+                        "serial_number": dev.get("serial_number", ""),
+                        "mac_address": dev.get("mac_address", ""),
+                        "battery_percent": dev.get("hardware_metrics", {}).get("battery_percent", 100),
+                        "signal_strength_dbm": dev.get("hardware_metrics", {}).get("signal_strength_dbm", -50)
+                    }
+            
+            critical_patients_details.append({
+                "id": str(p["_id"]),
+                "first_name": p.get("first_name", ""),
+                "last_name": p.get("last_name", ""),
+                "medical_record_id": p.get("medical_record_id", ""),
+                "last_telemetry_cache": p.get("last_telemetry_cache"),
+                "device_info": device_info
+            })
+            
+        critical_patients_count = len(critical_patients_details)
         
-        # Alertas críticas del grupo
-        critical_alerts = await db_service.db.alerts.count_documents({
+        # Alertas críticas activas reales para los pacientes de este cliente
+        patient_ids = [ObjectId(p["id"]) for p in critical_patients_details]
+        active_alerts_count = await db_service.db.alerts.count_documents({
             "patient_id": {"$in": patient_ids},
             "status": "ACTIVE"
         })
         
-        # Lista paciente-dispositivo
-        patient_device_list = []
-        for p in funded_patients:
-            dev_doc = None
-            if p.get("assigned_device_id"):
-                dev_doc = await db_service.db.devices.find_one({"_id": p["assigned_device_id"]})
-            serial_num = dev_doc["serial_number"] if dev_doc else "Sin Hardware"
-            
-            alerts_count = await db_service.db.alerts.count_documents({
-                "patient_id": p["_id"],
-                "created_at": {"$gte": now - timedelta(days=7)}
-            })
-            
-            patient_device_list.append({
-                "name": f"{p['first_name']} {p['last_name']}",
-                "hardware": serial_num,
-                "alerts_week": alerts_count
-            })
-            
-        # Inventario técnico asignado a este cliente
-        available_count = 0
-        assigned_count = 0
-        maintenance_count = 0
-        if device_ids:
-            assigned_count = await db_service.db.devices.count_documents({"_id": {"$in": device_ids}, "operational_status": "ASSIGNED"})
-            maintenance_count = await db_service.db.devices.count_documents({"_id": {"$in": device_ids}, "operational_status": "MAINTENANCE"})
-            available_count = await db_service.db.devices.count_documents({"_id": {"$in": device_ids}, "operational_status": "AVAILABLE"})
-            
-        if assigned_count == 0 and maintenance_count == 0 and available_count == 0:
-            available_count = 2
-            assigned_count = client_patients
-            maintenance_count = 1
-            
-        device_operational_status = [
-            {"status": "AVAILABLE", "count": available_count},
-            {"status": "ASSIGNED", "count": assigned_count},
-            {"status": "MAINTENANCE", "count": maintenance_count}
-        ]
-        
-        # Historial de incidentes del grupo (últimos 7 días)
-        incident_history = []
-        import random
-        base_date = now - timedelta(days=6)
-        days_es = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
-        current_day_idx = now.weekday()
-        
-        for i in range(7):
-            day_label = days_es[(current_day_idx - 6 + i) % 7]
-            t_start = datetime.combine(base_date + timedelta(days=i), datetime.min.time(), tzinfo=timezone.utc)
-            t_end = datetime.combine(base_date + timedelta(days=i), datetime.max.time(), tzinfo=timezone.utc)
-            
-            alerts_count = await db_service.db.alerts.count_documents({
-                "patient_id": {"$in": patient_ids},
-                "created_at": {"$gte": t_start, "$lte": t_end}
-            })
-            
-            incident_history.append({
-                "name": day_label,
-                "alertas": alerts_count if alerts_count > 0 else random.randint(0, 3)
-            })
-            
         return {
             "client_patients": client_patients,
-            "funded_patients_count": client_patients,
-            "deployed_devices_count": deployed_devices_count,
-            "critical_alerts": critical_alerts,
-            "contract_health": contract_health,
-            "total_clinical_sites": 1,
-            "patient_device_list": patient_device_list,
-            "device_operational_status": device_operational_status,
-            "incident_history": incident_history
+            "critical_patients_count": critical_patients_count,
+            "critical_patients_details": critical_patients_details,
+            "critical_alerts_count": active_alerts_count
         }
     
     return {}
+
 
 @router.get("/kpis", response_model=DashboardKPICacheResponse)
 async def get_dashboard_kpis(current_user: UserResponse = Depends(get_current_user)):
@@ -493,3 +337,41 @@ async def get_dashboard_kpis(current_user: UserResponse = Depends(get_current_us
                 )
                 
     return DashboardKPICacheResponse(**cache_doc)
+
+
+async def invalidate_dashboard_kpis(patient_id):
+    """
+    Elimina del caché de KPIs las entradas del administrador, del médico asignado 
+    y del cliente asignado al paciente. Esto obliga a recalcular los datos en la 
+    siguiente petición del frontend.
+    """
+    try:
+        p_id = ObjectId(patient_id) if isinstance(patient_id, str) else patient_id
+        patient = await db_service.db.patients.find_one({"_id": p_id})
+        if not patient:
+            return
+
+        # Claves de caché que deben ser invalidadas
+        keys_to_delete = ["admin_summary"]
+
+        doc_id = patient.get("assigned_doctor_id")
+        if doc_id:
+            d_id = ObjectId(doc_id) if isinstance(doc_id, str) else doc_id
+            doctor = await db_service.db.doctors.find_one({"_id": d_id})
+            if doctor and doctor.get("user_id"):
+                keys_to_delete.append(f"doctor_{doctor['user_id']}_summary")
+
+        cl_id = patient.get("client_id")
+        if cl_id:
+            c_id = ObjectId(cl_id) if isinstance(cl_id, str) else cl_id
+            client = await db_service.db.clients.find_one({"_id": c_id})
+            if client and client.get("user_id"):
+                keys_to_delete.append(f"client_{client['user_id']}_summary")
+
+        await db_service.db.dashboard_kpi_cache.delete_many({"_id": {"$in": keys_to_delete}})
+    except Exception as e:
+        import logging
+        logging.getLogger("app.dashboard").error(
+            f"Error al invalidar caché de KPIs del dashboard para el paciente {patient_id}: {e}"
+        )
+

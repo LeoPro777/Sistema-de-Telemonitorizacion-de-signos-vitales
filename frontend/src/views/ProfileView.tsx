@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, Shield, Mail, Phone, MapPin, FileText, 
-  Award, Briefcase, Settings, Edit3, Building, Heart
+  Award, Edit3, Building, Heart
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -13,7 +13,6 @@ export const ProfileView: React.FC = () => {
   // Estados de datos
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'PERSONAL' | 'ROLE'>('PERSONAL');
 
   const fetchProfile = async () => {
     setIsLoading(true);
@@ -140,39 +139,11 @@ export const ProfileView: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs de Navegación Interna */}
-      <div className="flex bg-[#0F1420] border border-[#1E2640] p-1 rounded-xl w-full md:w-96">
-        <button
-          onClick={() => setActiveTab('PERSONAL')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center space-x-2 ${
-            activeTab === 'PERSONAL'
-              ? 'bg-[#D4AF37] text-black shadow-md'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <User className="h-3.5 w-3.5" />
-          <span>Datos Personales</span>
-        </button>
-        
-        <button
-          onClick={() => setActiveTab('ROLE')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center space-x-2 ${
-            activeTab === 'ROLE'
-              ? 'bg-[#D4AF37] text-black shadow-md'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Briefcase className="h-3.5 w-3.5" />
-          <span>Información de Rol</span>
-        </button>
-      </div>
-
       {/* Cajas de Información */}
       <div className="bg-glass rounded-3xl border border-[#1E2640] p-6 md:p-8">
         
-        {/* PESTAÑA 1: DATOS PERSONALES */}
-        {activeTab === 'PERSONAL' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs md:text-sm">
+        {/* DATOS PERSONALES */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs md:text-sm">
             
             <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5">
               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Nombres Completos</span>
@@ -217,82 +188,6 @@ export const ProfileView: React.FC = () => {
             </div>
 
           </div>
-        )}
-
-        {/* PESTAÑA 2: INFORMACIÓN DE ROL (POLIMÓRFICO) */}
-        {activeTab === 'ROLE' && (
-          <div className="space-y-6 font-mono text-xs md:text-sm">
-            
-            {/* Si es Médico */}
-            {hasLicense && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-4 bg-[#1E2640]/25 border border-[#1E2640] rounded-2xl space-y-1.5">
-                  <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider block">Licencia Médica de Acreditación</span>
-                  <strong className="text-slate-200 block text-sm font-mono select-all">{roleData.medical_license}</strong>
-                </div>
-
-                <div className="p-4 bg-[#1E2640]/25 border border-[#1E2640] rounded-2xl space-y-1.5">
-                  <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider block">Especialidad Clínica</span>
-                  <strong className="text-slate-200 block text-sm font-sans">{roleData.specialty}</strong>
-                </div>
-
-                <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 col-span-1 md:col-span-2 flex items-center justify-between">
-                  <div className="space-y-1.5">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Ubicación de Consulta / Box</span>
-                    <strong className="text-slate-200 block text-sm font-sans">{roleData.office_location}</strong>
-                  </div>
-                  <Briefcase className="h-5 w-5 text-slate-600 mr-2" />
-                </div>
-              </div>
-            )}
-
-            {/* Si es Cliente (Clínica o Familiar) */}
-            {hasTaxId && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-4 bg-[#1E2640]/25 border border-[#1E2640] rounded-2xl space-y-1.5 col-span-1 md:col-span-2">
-                  <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider block">Razón Social Jurídica</span>
-                  <strong className="text-slate-200 block text-sm font-sans">{roleData.corporate_name}</strong>
-                </div>
-
-                <div className="p-4 bg-[#1E2640]/25 border border-[#1E2640] rounded-2xl space-y-1.5">
-                  <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider block">Documento Fiscal (TAX ID)</span>
-                  <strong className="text-slate-200 block text-sm font-mono select-all">{roleData.tax_id}</strong>
-                </div>
-
-                <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between">
-                  <div className="space-y-1.5">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Tipo de Fondeo Registrado</span>
-                    <strong className="text-slate-200 block text-sm font-sans uppercase">
-                      {roleData.client_type === 'CLINICA' ? 'Institucional / Clínica' : 'Familiar Directo'}
-                    </strong>
-                  </div>
-                  <Building className="h-5 w-5 text-slate-600 mr-2" />
-                </div>
-              </div>
-            )}
-
-            {/* Si es Paciente */}
-            {hasClinicalId && (
-              <div className="p-4 bg-[#1E2640]/25 border border-[#1E2640] rounded-2xl space-y-1.5 max-w-md flex items-center justify-between">
-                <div className="space-y-1.5">
-                  <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider block">Identificador Clínico Único</span>
-                  <strong className="text-slate-200 block text-sm font-mono select-all">{roleData.clinical_id}</strong>
-                </div>
-                <Heart className="h-5 w-5 text-[#FF1744] mr-2" />
-              </div>
-            )}
-
-            {/* Si es Admin u otro sin campos específicos de rol */}
-            {!hasLicense && !hasTaxId && !hasClinicalId && (
-              <div className="p-8 text-center bg-black/20 border border-[#1E2640]/40 rounded-2xl">
-                <Settings className="h-8 w-8 text-slate-600 mx-auto mb-3" />
-                <h4 className="text-sm font-bold text-slate-300">Privilegios Generales de Gobernanza</h4>
-                <p className="text-[10px] text-slate-500 mt-1">Como Administrador General de AURA, su cuenta cuenta con acceso maestro absoluto sin vinculación a consultorios médicos específicos.</p>
-              </div>
-            )}
-
-          </div>
-        )}
 
       </div>
 

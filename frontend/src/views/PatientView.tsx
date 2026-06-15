@@ -27,12 +27,12 @@ export const PatientView: React.FC = () => {
   const [isDeviceActive, setIsDeviceActive] = useState<boolean>(false);
   const [lastDataTimestamp, setLastDataTimestamp] = useState<number | null>(null);
 
-  // Watchdog para detectar desconexión (si pasan más de 15s sin trama)
+  // Watchdog para detectar desconexión (si pasan más de 30s sin trama)
   useEffect(() => {
     if (!lastDataTimestamp) return;
     const watchdog = setInterval(() => {
       const now = new Date().getTime();
-      if (now - lastDataTimestamp > 15000) {
+      if (now - lastDataTimestamp > 30000) {
         setIsDeviceActive(false);
         setPulseStatus('OFFLINE');
         setSpo2Status('OFFLINE');
@@ -53,6 +53,8 @@ export const PatientView: React.FC = () => {
         if (patients && patients.length > 0) {
           const patient = patients[0];
           setPatientData(patient);
+          setIsDeviceActive(patient.is_online === true);
+          setLastDataTimestamp(patient.last_telemetry_timestamp ? new Date(patient.last_telemetry_timestamp).getTime() : null);
           
           // Cargar valores iniciales desde el cache de la BD
           const cache = patient.last_telemetry_cache || {};
@@ -85,9 +87,14 @@ export const PatientView: React.FC = () => {
               setTempStatus(cache.temperature?.status || 'NORMAL');
               setOverallStatus(status || 'NORMAL');
               
+              if (message.alerts_resolved) {
+                toast.dismiss('critical-alert-toast');
+              }
+              
               if (new_alerts && new_alerts.length > 0) {
                 new_alerts.forEach((alert: any) => {
                   toast.error(`¡Alerta Clínica Crítica!: ${alert.description}`, {
+                    id: 'critical-alert-toast',
                     duration: 5000,
                     icon: '🚨'
                   });

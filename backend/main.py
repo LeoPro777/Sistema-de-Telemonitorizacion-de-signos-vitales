@@ -29,8 +29,8 @@ async def offline_checker_task():
     while True:
         try:
             now = datetime.now(timezone.utc)
-            cutoff_time = now - timedelta(seconds=15)
-            # Find and update all patients who are currently marked online but haven't sent data in 15s
+            cutoff_time = now - timedelta(seconds=30)
+            # Find and update all patients who are currently marked online but haven't sent data in 30s
             await db_service.raw_db.patients.update_many(
                 {
                     "is_online": True,

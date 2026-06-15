@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Award, Phone, MapPin, 
-  Trash2, User, Clock, CheckCircle2, History, AlertTriangle, AlertCircle
-
+  Trash2, Clock, CheckCircle2, History, AlertTriangle, AlertCircle, Users, CheckCircle, Plus
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
-import { ConfirmationModal } from '../components';
+import { ConfirmationModal, EntityLookupModal, ActionVerificationModal } from '../components';
+import { EntityType } from '../components/EntityLookupModal';
 
 export const DoctorDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +18,39 @@ export const DoctorDetailView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  const [lookupState, setLookupState] = useState<{ isOpen: boolean; type: EntityType; title: string }>({ isOpen: false, type: 'patients', title: '' });
+  const [verificationState, setVerificationState] = useState<{
+    isOpen: boolean;
+    target: any;
+    impactText: string;
+  }>({ isOpen: false, target: null, impactText: '' });
+
+  const openLookupModal = () => {
+    setLookupState({ isOpen: true, type: 'patients', title: 'Asignar Paciente' });
+  };
+
+  const handleEntitySelect = (entity: any) => {
+    const impactText = `Al confirmar, el paciente ${entity.first_name} ${entity.last_name} será asignado a la tutela clínica del Dr. ${doctor.first_name} ${doctor.last_name}.`;
+    setVerificationState({
+      isOpen: true,
+      target: entity,
+      impactText
+    });
+  };
+
+  const executeLinkage = async () => {
+    try {
+      await api.put(`/patients/${verificationState.target._id}`, {
+        assigned_doctor_id: id
+      });
+      toast.success('Paciente vinculado con éxito.');
+      setVerificationState(prev => ({ ...prev, isOpen: false }));
+      fetchDoctorDetail();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Error al vincular paciente.');
+    }
+  };
 
   const fetchDoctorDetail = async () => {
     setIsLoading(true);
@@ -220,33 +253,83 @@ export const DoctorDetailView: React.FC = () => {
         {/* Columna Derecha: Tutela Clínica y Control Crítico (1/3) */}
         <div className="space-y-6">
           
-          {/* Panel Pacientes a Cargo */}
+          {/* Panel Sublista Tabular de Pacientes Asignados */}
           <div className="bg-glass rounded-3xl border border-[#1E2640] p-6">
-            <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest border-b border-[#1E2640] pb-3 mb-4 flex items-center space-x-2">
-              <User className="h-4 w-4 text-[#D4AF37]" />
-              <span>Tutela Clínica</span>
-            </h3>
-
-            <div className="space-y-4">
-              <div className="p-4 bg-black/30 border border-[#1E2640] rounded-2xl text-center">
-                <span className="text-[10px] text-slate-500 font-bold block uppercase">Pacientes Activos Asignados</span>
-                <strong className="text-[#00F2FE] text-3xl font-extrabold block mt-2">
-                  {doctor.active_patients_count}
-                </strong>
-                <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
-                  Pacientes que reportan telemetría en tiempo real bajo su supervisión.
-                </p>
-              </div>
-
-              {doctor.active_patients_count > 0 && (
+            <div className="flex justify-between items-center border-b border-[#1E2640] pb-3 mb-4">
+              <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest flex items-center space-x-2">
+                <Users className="h-4 w-4 text-[#D4AF37]" />
+                <span>Nómina de Pacientes Asociados ({doctor.patients?.length ?? 0})</span>
+              </h3>
+              {doctor.is_active && (
                 <button
-                  onClick={() => navigate('/patients')}
-                  className="w-full py-2.5 bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] text-xs font-bold rounded-xl border border-[#D4AF37]/20 transition-all uppercase tracking-wider text-center"
+                  onClick={openLookupModal}
+                  className="px-3 py-1.5 bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black border border-[#D4AF37]/25 text-[#D4AF37] font-extrabold text-[10px] rounded-lg transition-all uppercase flex items-center space-x-1"
                 >
-                  Ver Nómina Completa
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Asignar Paciente</span>
                 </button>
               )}
             </div>
+
+            {(!doctor.patients || doctor.patients.length === 0) ? (
+              <div className="p-8 text-center text-xs text-slate-500 font-semibold uppercase">
+                <CheckCircle className="h-6 w-6 text-slate-600 mx-auto mb-2" />
+                <span>No existen pacientes bajo la tutela clínica de este médico.</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto mt-2">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-black/35 border-b border-[#1E2640] text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                      <th className="py-3 px-4">Paciente</th>
+                      <th className="py-3 px-4 text-center">Ficha Clínica</th>
+                      <th className="py-3 px-4 text-center">RUT Cédula</th>
+                      <th className="py-3 px-4 text-center">Estado Alerta</th>
+                      <th className="py-3 px-4 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#1E2640]/45">
+                    {doctor.patients.map((pat: any) => (
+                      <tr 
+                        key={pat.id} 
+                        className={`hover:bg-[#1E2640]/25 transition-all ${
+                          pat.has_active_alert ? 'bg-[#FF1744]/2' : ''
+                        }`}
+                      >
+                        <td className="py-3.5 px-4 font-bold text-slate-200">
+                          {pat.first_name} {pat.last_name}
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-semibold text-slate-400">
+                          {pat.medical_record_id}
+                        </td>
+                        <td className="py-3.5 px-4 text-center text-slate-400 font-semibold">
+                          {pat.national_id}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {pat.has_active_alert ? (
+                            <span className="px-2 py-0.5 rounded bg-[#FF1744]/20 border border-[#FF1744]/35 text-[#FF1744] text-[8px] font-bold animate-pulse">
+                              S.O.S.
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-bold">
+                              NORMAL
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            onClick={() => navigate(`/patients/${pat.id}`)}
+                            className="px-2.5 py-1 bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black font-extrabold text-[9px] text-[#D4AF37] border border-[#D4AF37]/20 rounded-md transition-all uppercase"
+                          >
+                            Expediente
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Panel Disponibilidad LED */}
@@ -315,6 +398,24 @@ export const DoctorDetailView: React.FC = () => {
         confirmText={doctor.is_active ? 'Inhabilitar' : 'Habilitar'}
         type={doctor.is_active ? 'danger' : 'success'}
       />
+      <EntityLookupModal
+        isOpen={lookupState.isOpen}
+        onClose={() => setLookupState({ ...lookupState, isOpen: false })}
+        entityType={lookupState.type}
+        title={lookupState.title}
+        onSelect={handleEntitySelect}
+      />
+
+      {verificationState.target && (
+        <ActionVerificationModal
+          isOpen={verificationState.isOpen}
+          onClose={() => setVerificationState({ ...verificationState, isOpen: false })}
+          onConfirm={executeLinkage}
+          sourceEntity={{ type: 'doctor', name: `Dr. ${doctor.first_name} ${doctor.last_name}`, subtitle: doctor.specialty }}
+          targetEntity={{ type: 'patient', name: `${verificationState.target.first_name} ${verificationState.target.last_name}`, subtitle: `ID: ${verificationState.target.national_id}` }}
+          impactText={verificationState.impactText}
+        />
+      )}
     </div>
   );
 };

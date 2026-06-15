@@ -112,11 +112,35 @@ async def get_device_detail(id: str, current_user: UserResponse = Depends(get_cu
     Retorna los detalles técnicos de un dispositivo específico.
     Incluye la caja de texto reactiva que lee en background el paciente asignado en la colección `patients`.
     """
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.CLIENT]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acceso denegado."
         )
+
+    # Si no es ADMIN, verificar vinculación con sus pacientes
+    if current_user.role != UserRole.ADMIN:
+        patient = await db_service.db.patients.find_one({"assigned_device_id": ObjectId(id)})
+        if not patient:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso denegado al dispositivo."
+            )
+        
+        if current_user.role == UserRole.DOCTOR:
+            doctor = await db_service.db.doctors.find_one({"user_id": ObjectId(current_user.id)})
+            if not doctor or patient.get("assigned_doctor_id") != doctor["_id"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Acceso denegado al dispositivo."
+                )
+        elif current_user.role == UserRole.CLIENT:
+            client = await db_service.db.clients.find_one({"user_id": ObjectId(current_user.id)})
+            if not client or patient.get("client_id") != client["_id"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Acceso denegado al dispositivo."
+                )
 
     device = await db_service.db.devices.find_one({"_id": ObjectId(id)})
     if not device:

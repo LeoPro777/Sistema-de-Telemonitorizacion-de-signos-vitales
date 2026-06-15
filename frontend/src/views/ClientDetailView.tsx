@@ -16,7 +16,6 @@ export const ClientDetailView: React.FC = () => {
   
   // Estados de datos
   const [client, setClient] = useState<any>(null);
-  const [healthPercent, setHealthPercent] = useState<number>(100);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -60,7 +59,6 @@ export const ClientDetailView: React.FC = () => {
     try {
       const response = await api.get(`/clients/${id}`);
       setClient(response.data);
-      setHealthPercent(response.data.summary_cache?.contract_health_percent ?? 100);
       setIsLoading(false);
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Error al obtener detalles técnicos del cliente.');
@@ -73,25 +71,6 @@ export const ClientDetailView: React.FC = () => {
       fetchClientDetail();
     }
   }, [id]);
-
-  const handleUpdateHealth = async (newVal: number) => {
-    setHealthPercent(newVal);
-    try {
-      await api.put(`/clients/${id}`, {
-        contract_health_percent: newVal
-      });
-      // Actualizar localmente de forma silenciosa
-      setClient((prev: any) => ({
-        ...prev,
-        summary_cache: {
-          ...prev.summary_cache,
-          contract_health_percent: newVal
-        }
-      }));
-    } catch (err) {
-      toast.error('Error al recalibrar la salud del contrato.');
-    }
-  };
 
   const handleToggleActiveState = async () => {
     const nextState = !client.is_active;
@@ -316,46 +295,6 @@ export const ClientDetailView: React.FC = () => {
 
         {/* Columna Derecha: Control Contractual e Inhabilitación (1/3) */}
         <div className="space-y-6">
-          
-          {/* Panel Salud Contrato (Calibrador Interactivo) */}
-          <div className="bg-glass rounded-3xl border border-[#1E2640] p-6">
-            <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest border-b border-[#1E2640] pb-3 mb-4 flex items-center space-x-2">
-              <Building2 className="h-4 w-4 text-[#D4AF37]" />
-              <span>Salud Financiera</span>
-            </h3>
-
-            <div className="space-y-6">
-              <div className="p-4 bg-black/35 border border-[#1E2640] rounded-2xl text-center">
-                <span className="text-[9px] text-slate-500 font-bold block uppercase">Cumplimiento del Contrato</span>
-                <strong className={`text-3xl font-extrabold block mt-2 ${
-                  healthPercent > 80 ? 'text-emerald-400' : healthPercent > 50 ? 'text-amber-400' : 'text-[#FF1744]'
-                }`}>
-                  {healthPercent}%
-                </strong>
-              </div>
-
-              {/* Slider interactivo para calibrar la salud en tiempo real */}
-              {client.is_active && (
-                <div className="space-y-2.5">
-                  <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold uppercase">
-                    <span>Ajustar Solvencia (Calibrador)</span>
-                    <span className="text-slate-300">{healthPercent}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={healthPercent}
-                    onChange={(e) => handleUpdateHealth(parseInt(e.target.value))}
-                    className="w-full accent-[#D4AF37] cursor-ew-resize bg-[#0B0F19] rounded-lg border border-[#1E2640] outline-none"
-                  />
-                  <p className="text-[9px] text-slate-500 leading-normal leading-tight font-bold">
-                    Deslizar este control recalibra dinámicamente la cobertura comercial de los dispositivos vinculados en base de datos.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Panel Icono e Identificación de Tipo */}
           <div className="bg-glass rounded-3xl border border-[#1E2640] p-6">

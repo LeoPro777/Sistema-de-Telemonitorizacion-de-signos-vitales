@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { 
-  Heart, Menu, X, Bell, Search, LogOut, 
+  Heart, Menu, X, Bell, LogOut, 
   LayoutDashboard, Users, Smartphone, ShieldCheck, 
   HelpCircle, UserCog, FileBarChart, Award, Building2, UserCheck,
   Settings, FlaskConical
@@ -17,6 +17,86 @@ export const DashboardLayout: React.FC = () => {
   const [criticalAlertCount, setCriticalAlertCount] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  
+  // Estados para sistema de alertas y campana
+  const [isBellDropdownOpen, setIsBellDropdownOpen] = useState(false);
+  const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+  const [isMuted, setIsMuted] = useState(false);
+  const prevAlertCount = useRef<number>(0);
+
+  // Cargar alertas recientes del usuario
+  const fetchRecentAlerts = async () => {
+    if (!user) return;
+    try {
+      const response = await api.get('/patients/alerts/recent?status_filter=ACTIVE');
+      setRecentAlerts(response.data || []);
+    } catch (err) {
+      console.error("Error al cargar alertas recientes:", err);
+    }
+  };
+
+  // Reproducir sonido de alarma médica (AudioContext)
+  const playAlarmSound = () => {
+    try {
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtxClass) return;
+      
+      const audioCtx = new AudioCtxClass();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const now = audioCtx.currentTime;
+      
+      // Pitido 1
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, now); // Tono médico de 880 Hz
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(0.8, now + 0.05);
+      gain1.gain.setValueAtTime(0.8, now + 0.25);
+      gain1.gain.linearRampToValueAtTime(0, now + 0.3);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.35);
+      
+      // Pitido 2 (400ms después)
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, now + 0.4);
+      gain2.gain.setValueAtTime(0, now + 0.4);
+      gain2.gain.linearRampToValueAtTime(0.8, now + 0.45);
+      gain2.gain.setValueAtTime(0.8, now + 0.65);
+      gain2.gain.linearRampToValueAtTime(0, now + 0.7);
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start(now + 0.4);
+      osc2.stop(now + 0.75);
+    } catch (error) {
+      console.warn("No se pudo reproducir el sonido de la alarma:", error);
+    }
+  };
+
+  // Resolver una alerta directamente desde el dropdown
+  const handleResolveAlert = async (patientId: string, alertId: string) => {
+    try {
+      await api.post(`/patients/${patientId}/alerts/${alertId}/resolve`);
+      toast.success("Alerta resuelta con éxito");
+      
+      // Actualizar alertas e indicadores inmediatamente
+      fetchRecentAlerts();
+      const response = await api.get('/dashboard/kpis');
+      const kpis = response.data.cached_metrics;
+      const count = kpis.critical_alerts_count || kpis.active_alerts || kpis.critical_alerts || 0;
+      setCriticalAlertCount(count);
+      prevAlertCount.current = count;
+      window.dispatchEvent(new Event('kpis-updated'));
+    } catch (err: any) {
+      toast.error("Error al resolver la alerta: " + (err.response?.data?.detail || err.message));
+    }
+  };
 
   const displayName = user 
     ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Usuario'
@@ -59,16 +139,68 @@ export const DashboardLayout: React.FC = () => {
       try {
         const response = await api.get('/dashboard/kpis');
         const kpis = response.data.cached_metrics;
-        setCriticalAlertCount(kpis.critical_alerts_count || kpis.active_alerts || kpis.critical_alerts || 0);
+        const count = kpis.critical_alerts_count || kpis.active_alerts || kpis.critical_alerts || 0;
+        
+        // Si hay una nueva alerta crítica (el contador sube), des-mutear automáticamente
+        if (count > prevAlertCount.current) {
+          setIsMuted(false);
+        }
+        prevAlertCount.current = count;
+        setCriticalAlertCount(count);
+        
+        // Cargar alertas recientes en el mismo intervalo
+        fetchRecentAlerts();
       } catch (err) {
         // Fallback silencioso ante modo offline / exploración libre
         setCriticalAlertCount(2);
       }
     };
     fetchKpis();
-    const interval = setInterval(fetchKpis, 10000); // Actualizar alertas cada 10 segundos
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchKpis, 10000); // Actualizar alertas de respaldo cada 10 segundos
+
+    // WebSockets globales para alertas en tiempo real
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const baseHost = (import.meta as any).env.VITE_WS_BASE_URL 
+      ? (import.meta as any).env.VITE_WS_BASE_URL.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '')
+      : window.location.host;
+    const wsUrl = `${wsProtocol}//${baseHost}/ws/global-alerts`;
+
+    let globalWs: WebSocket;
+    let keepAlive: any;
+    try {
+      globalWs = new WebSocket(wsUrl);
+      globalWs.onmessage = (event) => {
+        if (event.data === 'pong') return;
+        // Alerta cambiada, recargar inmediatamente
+        fetchKpis();
+        window.dispatchEvent(new Event('kpis-updated'));
+      };
+      keepAlive = setInterval(() => {
+        if (globalWs && globalWs.readyState === WebSocket.OPEN) {
+          globalWs.send('ping');
+        }
+      }, 30000);
+    } catch(err) {
+      console.warn("Global alerts WS failed", err);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (keepAlive) clearInterval(keepAlive);
+      if (globalWs) globalWs.close();
+    };
   }, [user, navigate]);
+
+  // Bucle de audio de alarma
+  useEffect(() => {
+    if (criticalAlertCount > 0 && !isMuted) {
+      playAlarmSound();
+      const soundInterval = setInterval(() => {
+        playAlarmSound();
+      }, 4000);
+      return () => clearInterval(soundInterval);
+    }
+  }, [criticalAlertCount, isMuted]);
 
   const handleLogout = () => {
     logout();
@@ -226,17 +358,6 @@ export const DashboardLayout: React.FC = () => {
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Buscador Semántico */}
-            <div className="relative hidden sm:block w-64 md:w-80">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                <Search className="h-4 w-4" />
-              </div>
-              <input
-                type="text"
-                placeholder="Buscador semántico global..."
-                className="w-full pl-9 pr-4 py-1.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl text-xs focus:border-[#D4AF37] outline-none transition-all placeholder:text-slate-600"
-              />
-            </div>
           </div>
 
           {/* Lado Derecho: Alertas, Perfil, Info del Rol */}
@@ -250,17 +371,97 @@ export const DashboardLayout: React.FC = () => {
             {/* Contador de alertas críticas globales */}
             <div className="relative">
               <button 
-                className={`p-2 rounded-xl border border-[#1E2640] bg-[#0A0D15]/40 text-slate-400 hover:text-slate-200 transition-all ${
+                onClick={() => {
+                  setIsBellDropdownOpen(!isBellDropdownOpen);
+                  if (!isBellDropdownOpen) {
+                    fetchRecentAlerts();
+                  }
+                }}
+                className={`p-2 rounded-xl border border-[#1E2640] bg-[#0A0D15]/40 text-slate-400 hover:text-slate-200 transition-all outline-none ${
                   criticalAlertCount > 0 ? 'border-[#FF1744]/40 text-[#FF1744] bg-[#FF1744]/5' : ''
                 }`}
                 title={`${criticalAlertCount} alertas vigentes`}
               >
-                <Bell className={`h-4.5 w-4.5 ${criticalAlertCount > 0 ? 'animate-bounce' : ''}`} />
+                <Bell className={`h-4.5 w-4.5 ${criticalAlertCount > 0 ? 'animate-bounce text-[#FF1744]' : ''}`} />
               </button>
               {criticalAlertCount > 0 && (
                 <span className="absolute top-0 right-0 h-4 w-4 bg-[#FF1744] rounded-full text-[9px] text-black font-extrabold flex items-center justify-center animate-pulse border border-[#0B0F19]">
                   {criticalAlertCount}
                 </span>
+              )}
+
+              {/* Dropdown de Alertas Recientes */}
+              {isBellDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsBellDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-3 w-80 bg-[#0F1420] border border-[#1E2640] rounded-2xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 flex flex-col overflow-hidden max-h-[420px]">
+                    <div className="px-4 py-3 bg-[#0A0D15]/60 border-b border-[#1E2640] flex items-center justify-between">
+                      <span className="font-extrabold text-xs uppercase tracking-wider text-[#D4AF37] font-mono">Panel de Alertas</span>
+                      <div className="flex items-center space-x-2">
+                        {criticalAlertCount > 0 && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} 
+                            className="px-2 py-0.5 bg-[#FF1744]/15 hover:bg-[#FF1744]/25 rounded-full border border-[#FF1744]/35 text-[9px] font-extrabold transition-all uppercase tracking-wider font-mono text-[#FF1744]"
+                          >
+                            {isMuted ? "🔊 ALARMA OFF" : "🔇 ALARMA ON"}
+                          </button>
+                        )}
+                        {criticalAlertCount > 0 && (
+                          <span className="px-2 py-0.5 bg-[#FF1744]/15 border border-[#FF1744]/30 rounded-full text-[9px] text-[#FF1744] font-bold uppercase animate-pulse font-mono">
+                            {criticalAlertCount} Críticas
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="overflow-y-auto divide-y divide-[#1E2640]/50 flex-grow scrollbar-thin max-h-[350px]">
+                      {recentAlerts.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-slate-500 font-sans text-xs">
+                          No hay alertas registradas
+                        </div>
+                      ) : (
+                        recentAlerts.map((alert) => (
+                          <div key={alert._id} className="p-4 hover:bg-[#1E2640]/15 transition-all flex flex-col space-y-2 text-left">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-slate-200 truncate max-w-[150px]">
+                                {alert.patient_name}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${
+                                alert.status === 'ACTIVE'
+                                  ? 'bg-[#FF1744]/10 border-[#FF1744]/30 text-[#FF1744]'
+                                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                              }`}>
+                                {alert.status === 'ACTIVE' ? 'Activa' : 'Resuelta'}
+                              </span>
+                            </div>
+                            
+                            <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+                              {alert.description}
+                            </p>
+                            
+                            <div className="flex items-center justify-between pt-1">
+                              <span className="text-[9px] text-slate-500 font-mono">
+                                {new Date(alert.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              </span>
+                              
+                              {alert.status === 'ACTIVE' && (user?.role === 'ADMIN' || user?.role === 'DOCTOR') && (
+                                <button
+                                  onClick={() => handleResolveAlert(alert.patient_id, alert._id)}
+                                  className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-[9px] rounded-lg transition-all uppercase tracking-wider"
+                                >
+                                  Resolver
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 
@@ -334,6 +535,8 @@ export const DashboardLayout: React.FC = () => {
 
           </div>
         </header>
+
+
 
         {/* SUBVISTAS DINÁMICAS (OUTLET) */}
         <main className="flex-grow p-6 md:p-8 overflow-y-auto relative">

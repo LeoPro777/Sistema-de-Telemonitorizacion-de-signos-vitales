@@ -49,11 +49,11 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: PyObjectId = Field(alias="_id")
-    google_id: str
+    google_id: Optional[str] = None
     email: EmailStr
-    first_name: str
-    last_name: str
-    avatar_url: str
+    first_name: str = ""
+    last_name: str = ""
+    avatar_url: str = ""
     role: Optional[UserRole] = None
     status: UserStatus
     created_at: datetime

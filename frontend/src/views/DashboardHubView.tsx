@@ -52,7 +52,15 @@ export const DashboardHubView: React.FC = () => {
       loadDashboardData(true);
     }, 10000); // Sincroniza telemetría cada 10 segundos en segundo plano
 
-    return () => clearInterval(interval);
+    const handleKpisUpdated = () => {
+      loadDashboardData(true);
+    };
+    window.addEventListener('kpis-updated', handleKpisUpdated);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('kpis-updated', handleKpisUpdated);
+    };
   }, []);
 
   const handleManualRefresh = () => {
@@ -73,7 +81,7 @@ export const DashboardHubView: React.FC = () => {
   const renderDashboardByRole = () => {
     switch (role) {
       case 'ADMIN':
-        return <AdminDashboard kpis={kpis} onRefresh={() => loadDashboardData(true)} />;
+        return <AdminDashboard kpis={kpis} />;
       case 'DOCTOR':
         return <DoctorDashboard kpis={kpis} />;
       case 'CLIENT':
