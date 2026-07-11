@@ -58,6 +58,8 @@ class UserResponse(BaseModel):
     status: UserStatus
     created_at: datetime
     updated_at: datetime
+    completed_tours: list[str] = Field(default_factory=list)
+
     from pydantic import field_validator
     @field_validator('role', mode='before')
     def parse_role(cls, v):
@@ -101,4 +103,8 @@ class GoogleLoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     success: bool
     user: UserResponse
+
+
+class UserPreferencesUpdate(BaseModel):
+    completed_tour: str
 

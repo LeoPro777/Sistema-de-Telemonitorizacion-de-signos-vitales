@@ -144,8 +144,8 @@ const App: React.FC = () => {
           <Route path="devices/provision" element={<AdminRoute><DeviceProvisionView /></AdminRoute>} />
 
           {/* Rutas reales del Módulo 6 */}
-          <Route path="doctors" element={<DoctorsView />} />
-          <Route path="doctors/:id" element={<DoctorDetailView />} />
+          <Route path="doctors" element={<AdminRoute><DoctorsView /></AdminRoute>} />
+          <Route path="doctors/:id" element={<AdminRoute><DoctorDetailView /></AdminRoute>} />
 
           {/* Rutas reales del Módulo 7 */}
           <Route path="clients" element={<ClientsView />} />

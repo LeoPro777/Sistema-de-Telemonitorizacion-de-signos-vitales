@@ -6,9 +6,12 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';
+import { useTour } from '../hooks/useTour';
 
 export const HelpCenterView: React.FC = () => {
   const navigate = useNavigate();
+  const { user, updateUser } = useAuthStore();
 
   // Estados de datos
   const [articles, setArticles] = useState<any[]>([]);
@@ -28,6 +31,52 @@ export const HelpCenterView: React.FC = () => {
   const [isSubmittingTicket, setIsSubmittingTicket] = useState<boolean>(false);
 
   const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Configuración del Product Tour del Centro de Ayuda
+  const tourSteps = [
+    {
+      element: '#help-header',
+      popover: {
+        title: 'Centro de Ayuda y Soporte',
+        description: 'Bienvenido a la consola de soporte de AURA. Aquí encontrarás guías técnicas, respuestas a preguntas frecuentes y herramientas de diagnóstico.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#help-search-input',
+      popover: {
+        title: 'Buscador de Conocimiento',
+        description: 'Escribe palabras clave para buscar respuestas semánticas rápidas sobre el ESP32, constantes vitales o facturación.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#help-tabs',
+      popover: {
+        title: 'Pestañas de Formato',
+        description: 'Alterna entre visualizaciones de preguntas rápidas (FAQs) o guías de lectura profundas y manuales clínicos.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#system-tours-panel',
+      popover: {
+        title: 'Guías Interactivas del Sistema',
+        description: 'Desde este panel puedes volver a lanzar de forma manual los recorridos guiados (tours) de cualquiera de los módulos clave del sistema.',
+        position: 'top'
+      }
+    },
+    {
+      element: '#reset-tours-btn',
+      popover: {
+        title: 'Restablecer Historial de Guías',
+        description: 'Presiona este botón para limpiar el historial de tours completados. Esto hará que todos los tours se vuelvan a reproducir de forma automática al ingresar a las vistas correspondientes.',
+        position: 'top'
+      }
+    }
+  ];
+
+  const { startTour } = useTour('help_tour', tourSteps);
 
   // Consultar artículos con filtros
   const fetchArticles = async () => {
@@ -124,11 +173,60 @@ export const HelpCenterView: React.FC = () => {
     }
   };
 
+  // Función para forzar el inicio de tours manuales
+  const handleLaunchTour = async (tourId: string) => {
+    if (tourId === 'help_tour') {
+      startTour(true);
+      return;
+    }
+    
+    if (tourId === 'patient_detail_tour') {
+      try {
+        // Obtener el primer paciente disponible para iniciar el tour de detalle
+        const response = await api.get('/patients', { params: { limit: 1 } });
+        const patients = response.data.patients || [];
+        if (patients.length > 0) {
+          localStorage.setItem('aura_force_tour', 'patient_detail_tour');
+          navigate(`/patients/${patients[0]._id}`);
+        } else {
+          toast.error('No hay pacientes registrados para iniciar el tour del expediente.');
+        }
+      } catch (err) {
+        toast.error('Privilegios insuficientes o error al buscar expedientes de pacientes.');
+      }
+      return;
+    }
+    
+    const tourPaths: Record<string, string> = {
+      dashboard_tour: '/dashboard',
+      patients_tour: '/patients',
+      devices_tour: '/devices',
+      settings_tour: '/settings'
+    };
+    
+    const path = tourPaths[tourId];
+    if (path) {
+      localStorage.setItem('aura_force_tour', tourId);
+      navigate(path);
+    }
+  };
+
+  // Restablecer historial de tours completados
+  const handleResetTours = async () => {
+    try {
+      const response = await api.post('/users/me/preferences/reset');
+      updateUser(response.data);
+      toast.success('¡Historial restablecido! Los tours volverán a iniciarse de forma automática.');
+    } catch (err) {
+      toast.error('Error al restablecer las guías completadas.');
+    }
+  };
+
   return (
     <div className="space-y-6 font-mono relative">
       
       {/* Cabecera superior */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div id="help-header" className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
             MÓDULO 9: CENTRO DE AYUDA Y SOPORTE TÉCNICO
@@ -159,6 +257,7 @@ export const HelpCenterView: React.FC = () => {
               setSearchQuery(e.target.value);
               setShowSuggestions(true);
             }}
+            id="help-search-input"
             onFocus={() => setShowSuggestions(true)}
             placeholder="Buscar guías del ESP32, alertas clínicas, facturación..."
             className="w-full pl-11 pr-24 py-3 bg-[#0B0F19] border border-[#1E2640] rounded-2xl text-sm focus:border-[#D4AF37] outline-none transition-all placeholder:text-slate-600 font-sans"
@@ -203,103 +302,177 @@ export const HelpCenterView: React.FC = () => {
         </form>
       </div>
 
-      {/* Píldoras de Categorías y Selector de Formato FAQ/Guías */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1E2640]/55 pb-4">
+      {/* Contenedor Principal en Rejilla */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Píldoras horizontales de categoría */}
-        <div className="flex flex-wrap gap-2">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => { setActiveCategory(cat); }}
-              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${
-                activeCategory === cat
-                  ? 'bg-[#1E2640] text-[#D4AF37] border-[#D4AF37]/30 shadow-md'
-                  : 'bg-black/10 text-slate-400 border-[#1E2640] hover:text-slate-200'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Tabs FAQ vs Guías */}
-        <div className="flex bg-[#0F1420] border border-[#1E2640] p-1 rounded-xl self-start md:self-auto">
-          <button
-            onClick={() => setActiveTab('FAQ')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
-              activeTab === 'FAQ'
-                ? 'bg-[#D4AF37] text-black shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <HelpCircle className="h-3.5 w-3.5" />
-            <span>FAQs</span>
-          </button>
+        {/* Columna Izquierda: Artículos (2/3 de la pantalla en desktop) */}
+        <div className="lg:col-span-2 space-y-6">
           
-          <button
-            onClick={() => setActiveTab('GUIDE')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
-              activeTab === 'GUIDE'
-                ? 'bg-[#D4AF37] text-black shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            <span>Guías Clínicas</span>
-          </button>
-        </div>
-      </div>
+          {/* Píldoras de Categorías y Selector de Formato FAQ/Guías */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1E2640]/55 pb-4">
+            {/* Píldoras horizontales de categoría */}
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => { setActiveCategory(cat); }}
+                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${
+                    activeCategory === cat
+                      ? 'bg-[#1E2640] text-[#D4AF37] border-[#D4AF37]/30 shadow-md'
+                      : 'bg-black/10 text-slate-400 border-[#1E2640] hover:text-slate-200'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
 
-      {/* Listado de Artículos */}
-      {isLoading ? (
-        <div className="h-[30vh] flex flex-col items-center justify-center space-y-3">
-          <div className="w-8 h-8 border-3 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Cargando base de conocimiento...</p>
+            {/* Tabs FAQ vs Guías */}
+            <div id="help-tabs" className="flex bg-[#0F1420] border border-[#1E2640] p-1 rounded-xl self-start md:self-auto">
+              <button
+                onClick={() => setActiveTab('FAQ')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
+                  activeTab === 'FAQ'
+                    ? 'bg-[#D4AF37] text-black shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                <span>FAQs</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('GUIDE')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
+                  activeTab === 'GUIDE'
+                    ? 'bg-[#D4AF37] text-black shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Guías Clínicas</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Listado de Artículos */}
+          {isLoading ? (
+            <div className="h-[30vh] flex flex-col items-center justify-center space-y-3">
+              <div className="w-8 h-8 border-3 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Cargando base de conocimiento...</p>
+            </div>
+          ) : articles.length === 0 ? (
+            <div className="bg-glass p-12 text-center rounded-3xl border border-[#1E2640] max-w-md mx-auto">
+              <AlertCircle className="h-10 w-10 text-slate-600 mx-auto mb-4" />
+              <h4 className="text-sm font-bold text-slate-200">No se encontraron artículos</h4>
+              <p className="text-[10px] text-slate-500 mt-1">Pruebe limpiando el buscador o seleccionando otra categoría.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {articles.map((art) => (
+                <button
+                  key={art._id}
+                  onClick={() => navigate(`/support/articles/${art.slug}`)}
+                  className="bg-glass p-6 rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/30 text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] group outline-none h-full min-h-[160px]"
+                >
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-black/45 border border-[#1E2640] text-[#D4AF37] uppercase">
+                        {art.category}
+                      </span>
+                      
+                      <span className="text-[9px] text-slate-500 font-mono font-bold flex items-center space-x-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{art.format_type === 'FAQ' ? 'Pregunta Frecuente' : 'Guía de Lectura'}</span>
+                      </span>
+                    </div>
+
+                    <h4 className="text-base font-extrabold text-slate-200 group-hover:text-white transition-colors leading-tight">
+                      {art.title}
+                    </h4>
+                    
+                    <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed font-sans">
+                      {art.content.replace(/[#*`_]/g, '').slice(0, 150)}...
+                    </p>
+                  </div>
+
+                  <div className="border-t border-[#1E2640]/55 pt-3 mt-4 flex justify-between items-center text-[10px] font-bold text-slate-500 group-hover:text-[#D4AF37] transition-colors font-mono">
+                    <span>LEER ARTÍCULO</span>
+                    <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      ) : articles.length === 0 ? (
-        <div className="bg-glass p-12 text-center rounded-3xl border border-[#1E2640] max-w-md mx-auto">
-          <AlertCircle className="h-10 w-10 text-slate-600 mx-auto mb-4" />
-          <h4 className="text-sm font-bold text-slate-200">No se encontraron artículos</h4>
-          <p className="text-[10px] text-slate-500 mt-1">Pruebe limpiando el buscador o seleccionando otra categoría.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {articles.map((art) => (
-            <button
-              key={art._id}
-              onClick={() => navigate(`/support/articles/${art.slug}`)}
-              className="bg-glass p-6 rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/30 text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] group outline-none h-full min-h-[160px]"
-            >
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-black/45 border border-[#1E2640] text-[#D4AF37] uppercase">
-                    {art.category}
-                  </span>
-                  
-                  <span className="text-[9px] text-slate-500 font-mono font-bold flex items-center space-x-1">
-                    <Clock className="h-3 w-3" />
-                    <span>{art.format_type === 'FAQ' ? 'Pregunta Frecuente' : 'Guía de Lectura'}</span>
-                  </span>
+
+        {/* Columna Derecha: Guías del Sistema y Reinicio de Estado (1/3 de la pantalla) */}
+        <div id="system-tours-panel" className="bg-glass p-6 rounded-3xl border border-[#1E2640] space-y-6 self-start">
+          <div>
+            <span className="text-[9px] text-[#D4AF37] tracking-[0.15em] font-bold uppercase block mb-1">
+              RECORRIDOS GUIADOS
+            </span>
+            <h3 className="text-base font-extrabold text-slate-200 tracking-tight">Guías del Sistema</h3>
+            <p className="text-[10px] text-slate-500 mt-1 leading-normal">
+              Inicie manualmente un tour interactivo para familiarizarse con cada sección de AURA.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              { id: 'dashboard_tour', name: 'Consola Principal (Dashboard)', allowed: true },
+              { id: 'patients_tour', name: 'Nómina de Pacientes', allowed: true },
+              { id: 'patient_detail_tour', name: 'Expediente Fisiológico', allowed: true },
+              { id: 'devices_tour', name: 'Inventario de Hardware IoT', allowed: user?.role === 'ADMIN' },
+              { id: 'settings_tour', name: 'Preferencias y Ajustes', allowed: true },
+              { id: 'help_tour', name: 'Centro de Ayuda AURA', allowed: true }
+            ].map((tour) => (
+              <div 
+                key={tour.id} 
+                className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                  tour.allowed 
+                    ? 'bg-black/20 border-[#1E2640] hover:border-[#D4AF37]/20' 
+                    : 'bg-black/10 border-slate-900/50 opacity-40'
+                }`}
+              >
+                <div className="pr-2 truncate">
+                  <span className="text-xs text-slate-300 font-bold block truncate">{tour.name}</span>
+                  <span className="text-[8px] text-slate-500 font-mono">ID: {tour.id}</span>
                 </div>
-
-                <h4 className="text-base font-extrabold text-slate-200 group-hover:text-white transition-colors leading-tight">
-                  {art.title}
-                </h4>
-                
-                <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed font-sans">
-                  {art.content.replace(/[#*`_]/g, '').slice(0, 150)}...
-                </p>
+                {tour.allowed ? (
+                  <button
+                    onClick={() => handleLaunchTour(tour.id)}
+                    className="px-3 py-1.5 bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black text-[9px] text-[#D4AF37] font-bold rounded-lg border border-[#D4AF37]/20 transition-all uppercase whitespace-nowrap"
+                  >
+                    Iniciar
+                  </button>
+                ) : (
+                  <span className="text-[8px] text-slate-600 font-bold uppercase border border-slate-800 rounded px-1.5 py-0.5">
+                    Bloqueado
+                  </span>
+                )}
               </div>
+            ))}
+          </div>
 
-              <div className="border-t border-[#1E2640]/55 pt-3 mt-4 flex justify-between items-center text-[10px] font-bold text-slate-500 group-hover:text-[#D4AF37] transition-colors font-mono">
-                <span>LEER ARTÍCULO</span>
-                <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
+          <div className="border-t border-[#1E2640]/55 pt-4 mt-2">
+            <span className="text-[9px] text-[#FF1744] font-bold uppercase tracking-wider block mb-1">
+              ADMINISTRACIÓN DE TOURS
+            </span>
+            <p className="text-[9px] text-slate-500 leading-normal mb-3">
+              ¿Deseas volver a reproducir todos los tours interactivos al ingresar a cada vista por primera vez? Restablece tu historial de preferencias.
+            </p>
+            <button
+              onClick={handleResetTours}
+              id="reset-tours-btn"
+              className="w-full py-2.5 bg-[#FF1744]/10 hover:bg-[#FF1744] text-[#FF1744] hover:text-black text-[10px] font-extrabold rounded-xl border border-[#FF1744]/30 transition-all uppercase tracking-wider text-center"
+            >
+              Restablecer Guías Completadas
             </button>
-          ))}
+          </div>
         </div>
-      )}
+
+      </div>
 
       {/* MODAL GLASSMORPHIC DE CREACIÓN DE TICKET DE SOPORTE */}
       {isTicketModalOpen && (
@@ -370,7 +543,7 @@ export const HelpCenterView: React.FC = () => {
                 ) : (
                   <>
                     <Send className="h-3.5 w-3.5" />
-                    <span>Enviar Solicitud Técnica</span>
+                    <span>Enviar Solicitud Técnico</span>
                   </>
                 )}
               </button>
@@ -382,4 +555,5 @@ export const HelpCenterView: React.FC = () => {
     </div>
   );
 };
+
 export default HelpCenterView;

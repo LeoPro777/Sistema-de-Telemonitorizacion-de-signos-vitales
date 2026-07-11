@@ -15,6 +15,7 @@ export interface User {
   status: UserStatus;
   created_at: string;
   updated_at: string;
+  completed_tours?: string[];
 }
 
 interface AuthState {
@@ -33,6 +34,7 @@ interface AuthState {
   onboarding: (role: UserRole, personalData: any, professionalMetadata: any) => Promise<any>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  updateUser: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -43,6 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   selectedRole: null,
   
   setSelectedRole: (role) => set({ selectedRole: role }),
+  updateUser: (user) => set({ user }),
   
   googleLogin: async (tokenOrCode, isCodeFlow = false) => {
     set({ isLoading: true });

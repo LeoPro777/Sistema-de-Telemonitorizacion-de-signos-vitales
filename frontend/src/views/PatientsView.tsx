@@ -6,9 +6,48 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import useTour from '../hooks/useTour';
 
 export const PatientsView: React.FC = () => {
   const navigate = useNavigate();
+
+  // Configuración del Product Tour
+  const tourSteps = [
+    {
+      element: '#patients-header',
+      popover: {
+        title: 'Consola de Pacientes',
+        description: 'Aquí puedes supervisar la nómina médica de pacientes del sistema. Cada tarjeta muestra constantes de pulso, SpO2 y temperatura en tiempo real.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#view-toggle-btn',
+      popover: {
+        title: 'Alternar Vista',
+        description: 'Cambia entre vista de tarjetas de alta fidelidad o tabla clínica de alta densidad para una lectura rápida.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#patients-search',
+      popover: {
+        title: 'Búsqueda de Pacientes',
+        description: 'Busca expedientes, RUN o nombres de pacientes de manera instantánea.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#criticality-filters',
+      popover: {
+        title: 'Filtrado por Gravedad',
+        description: 'Filtra la nómina para ver solo pacientes críticos con alertas activas o pacientes estables con signos normales.',
+        position: 'bottom'
+      }
+    }
+  ];
+
+  useTour('patients_tour', tourSteps);
   
   // Estados de datos
   const [patients, setPatients] = useState<any[]>([]);
@@ -93,12 +132,16 @@ export const PatientsView: React.FC = () => {
         const resetTimeout = () => {
           const inst = currentMap.get(patient._id);
           if (inst?.timeoutId) clearTimeout(inst.timeoutId);
+          
+          const storedTimeout = localStorage.getItem('aura_inactivity_timeout');
+          const timeoutMs = storedTimeout ? parseInt(storedTimeout) : 30000;
+          
           const newTimeoutId = setTimeout(() => {
             setLiveData(prev => ({
               ...prev,
               [patient._id]: { ...(prev[patient._id] || {}), isDeviceActive: false }
             }));
-          }, 30000); // 30 segundos sin datos = Inactivo (Gris)
+          }, timeoutMs);
           
           if (inst) inst.timeoutId = newTimeoutId;
         };
@@ -185,12 +228,13 @@ export const PatientsView: React.FC = () => {
           <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
             MÓDULO DE GESTIÓN MÉDICA
           </span>
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Consola de Pacientes</h2>
+          <h2 id="patients-header" className="text-2xl md:text-3xl font-extrabold tracking-tight">Consola de Pacientes</h2>
           <p className="text-xs text-slate-400 mt-1">Supervisión e inspección de expedientes vitales en red.</p>
         </div>
 
         {/* Alternador de Vista (Grid / Tabla) */}
         <button
+          id="view-toggle-btn"
           onClick={handleToggleViewType}
           className="px-4 py-2 bg-[#1E2640] hover:bg-[#1E2640]/80 text-[#D4AF37] text-xs font-semibold rounded-xl border border-[#D4AF37]/25 flex items-center space-x-2 transition-all self-start md:self-auto"
         >
@@ -217,16 +261,17 @@ export const PatientsView: React.FC = () => {
             <Search className="h-4.5 w-4.5" />
           </div>
           <input
+            id="patients-search"
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por expediente, ID nacional o nombre..."
+            placeholder="Buscar por expediente, RUN o nombre..."
             className="w-full pl-10 pr-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl text-sm focus:border-[#D4AF37] outline-none transition-all placeholder:text-slate-600"
           />
         </div>
 
         {/* Píldoras de Filtrado por Criticidad */}
-        <div className="flex items-center space-x-3 w-full md:w-auto overflow-x-auto py-1">
+        <div id="criticality-filters" className="flex items-center space-x-3 w-full md:w-auto overflow-x-auto py-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden lg:inline">Criticidad:</span>
           
           <button

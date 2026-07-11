@@ -6,9 +6,48 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useTour } from '../hooks/useTour';
 
 export const DevicesView: React.FC = () => {
   const navigate = useNavigate();
+  
+  // Configuración del Product Tour
+  const tourSteps = [
+    {
+      element: '#devices-header',
+      popover: {
+        title: 'Consola de Dispositivos',
+        description: 'Aquí puedes supervisar y administrar todos los microcontroladores ESP32 e instrumentos biométricos del sistema.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#provision-device-btn',
+      popover: {
+        title: 'Provisión de Hardware',
+        description: 'Utiliza esta opción para registrar y aprovisionar un nuevo dispositivo ESP32 en el ecosistema IoT.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#devices-search',
+      popover: {
+        title: 'Buscador Técnico',
+        description: 'Busca rápidamente dispositivos utilizando su número de serie de hardware (S/N) o su dirección MAC única.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#operational-status-filter',
+      popover: {
+        title: 'Filtro Operacional',
+        description: 'Filtra el equipamiento de acuerdo a su estado en tiempo real: Disponible, Asignado a paciente o en Mantenimiento técnico.',
+        position: 'bottom'
+      }
+    }
+  ];
+
+  useTour('devices_tour', tourSteps);
   
   // Estados de datos
   const [devices, setDevices] = useState<any[]>([]);
@@ -93,7 +132,7 @@ export const DevicesView: React.FC = () => {
     <div className="space-y-6">
       
       {/* Cabecera de Página */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div id="devices-header" className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
             MÓDULO 5: INVENTARIO TÉCNICO IOT
@@ -105,6 +144,7 @@ export const DevicesView: React.FC = () => {
         {/* Botón Provisión de Hardware */}
         <button
           onClick={() => navigate('/devices/provision')}
+          id="provision-device-btn"
           className="px-4 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] hover:from-[#AA7C11] hover:to-[#AA7C11]/80 text-black text-xs font-extrabold rounded-xl shadow-lg shadow-[#D4AF37]/15 flex items-center space-x-2 transition-all self-start md:self-auto uppercase tracking-wider"
         >
           <Plus className="h-4 w-4 stroke-[3]" />
@@ -124,6 +164,7 @@ export const DevicesView: React.FC = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            id="devices-search"
             placeholder="Buscar por MAC o Número de Serie..."
             className="w-full pl-10 pr-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl text-sm focus:border-[#D4AF37] outline-none transition-all placeholder:text-slate-600 font-mono"
           />
@@ -136,6 +177,7 @@ export const DevicesView: React.FC = () => {
           <select
             value={operationalStatus}
             onChange={(e) => setOperationalStatus(e.target.value)}
+            id="operational-status-filter"
             className="bg-[#0B0F19] border border-[#1E2640] text-slate-300 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none focus:border-[#D4AF37] transition-all cursor-pointer"
           >
             <option value="">Estado Operacional (Todos)</option>
@@ -172,7 +214,7 @@ export const DevicesView: React.FC = () => {
       ) : (
         <>
           {/* Technical Monospaced Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {devices.map((device) => {
               const metrics = device.hardware_metrics || { battery_percent: 100, signal_strength_dbm: -50 };
               const isPending = device.approval_status === 'PENDING_APPROVAL';
@@ -180,11 +222,11 @@ export const DevicesView: React.FC = () => {
               return (
                 <div
                   key={device._id}
-                  className={`bg-glass rounded-3xl border p-6 flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] outline-none relative overflow-hidden font-mono ${
+                  className={`bg-glass rounded-3xl border p-6 flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden font-mono ${
+                    !device.is_active ? 'grayscale opacity-60' : ''
+                  } ${
                     device.has_hardware_alert 
                       ? 'border-[#FFD700] bg-[#FFD700]/5 shadow-[0_0_15px_rgba(255,215,0,0.06)] animate-pulse' 
-                      : device.is_active === false 
-                      ? 'border-[#1E2640]/40 opacity-40'
                       : 'border-[#1E2640] hover:border-[#D4AF37]/30'
                   }`}
                 >

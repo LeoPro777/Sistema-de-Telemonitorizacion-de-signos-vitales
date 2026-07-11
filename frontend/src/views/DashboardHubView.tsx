@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { DoctorDashboard } from './DoctorDashboard';
 import { ClientDashboard } from './ClientDashboard';
 import { AdminDashboard } from './AdminDashboard';
+import { useTour } from '../hooks/useTour';
 
 export const DashboardHubView: React.FC = () => {
   const { user } = useAuthStore();
@@ -14,6 +15,60 @@ export const DashboardHubView: React.FC = () => {
   const [kpis, setKpis] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<string>('');
+
+  // Configuración del Product Tour
+  const tourSteps = [
+    {
+      element: '#welcome-header',
+      popover: {
+        title: '¡Bienvenido a AURA!',
+        description: 'Esta es tu consola de telemonitoreo central. Aquí puedes ver el resumen general de pacientes, doctores, dispositivos y alertas activas en tiempo real.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#sidebar-logo',
+      popover: {
+        title: 'Ecosistema de Monitoreo',
+        description: 'AURA consolida los datos biométricos de los pacientes transmitidos desde hardware IoT y ESP32.',
+        position: 'right'
+      }
+    },
+    {
+      element: '#sidebar-nav',
+      popover: {
+        title: 'Navegación de Módulos',
+        description: 'Accede a la lista de pacientes, gestión técnica de dispositivos IoT, expedientes de médicos, logs de auditoría forense y centro de soporte.',
+        position: 'right'
+      }
+    },
+    {
+      element: '#bell-notifications',
+      popover: {
+        title: 'Centro de Alertas Críticas',
+        description: 'La campana parpadea en rojo y activa la alarma médica sonora si hay pacientes con constantes vitales críticas. Desde aquí puedes resolverlas directamente.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#settings-dropdown-btn',
+      popover: {
+        title: 'Ajustes y Preferencias',
+        description: 'Configura el volumen del sintetizador acústico de alarmas, los estilos de visualización, tus datos de perfil o accede al Centro de Ayuda.',
+        position: 'bottom'
+      }
+    },
+    {
+      element: '#refresh-kpis-btn',
+      popover: {
+        title: 'Sincronizar Panel',
+        description: 'Sincroniza la caché de métricas y KPIs con la base de datos MongoDB al instante.',
+        position: 'bottom'
+      }
+    }
+  ];
+
+  useTour('dashboard_tour', tourSteps);
 
   const displayName = user 
     ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Usuario'
@@ -108,7 +163,7 @@ export const DashboardHubView: React.FC = () => {
       
       {/* Saludo y Cabecera General del Dashboard */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#1E2640]/55 pb-6">
-        <div>
+        <div id="welcome-header">
           <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
             CONSOLA DE TELEMONITOREO • {getRoleLabel()}
           </span>
@@ -121,6 +176,7 @@ export const DashboardHubView: React.FC = () => {
         </div>
 
         <button
+          id="refresh-kpis-btn"
           onClick={handleManualRefresh}
           className="px-4 py-2 bg-[#1E2640] hover:bg-[#1E2640]/80 text-[#D4AF37] text-xs font-semibold rounded-xl border border-[#D4AF37]/25 flex items-center space-x-2 transition-all shadow-md active:scale-95"
         >

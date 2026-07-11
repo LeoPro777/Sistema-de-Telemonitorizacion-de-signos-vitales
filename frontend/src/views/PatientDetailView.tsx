@@ -16,12 +16,49 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { ConfirmationModal, EntityLookupModal, ActionVerificationModal } from '../components';
 import { EntityType } from '../components/EntityLookupModal';
+import useTour from '../hooks/useTour';
 
 
 export const PatientDetailView: React.FC = () => {
-  const { user } = useAuthStore();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+
+  // Configuración del Product Tour
+  const getTourSteps = () => {
+    const steps = [
+      {
+        element: '#patient-header-title',
+        popover: {
+          title: 'Ficha Clínica del Paciente',
+          description: 'Aquí puedes supervisar la información detallada, RUN, expediente y estado de transmisión del paciente seleccionado.',
+          position: 'bottom'
+        }
+      },
+      {
+        element: '#live-vitals-charts',
+        popover: {
+          title: 'Monitoreo Triaxial en Vivo',
+          description: 'Visualiza gráficos en tiempo real sincronizados del pulso (BPM), la saturación de oxígeno (SpO2%) y la temperatura corporal.',
+          position: 'bottom'
+        }
+      }
+    ];
+
+    if (user?.role !== 'CLIENT') {
+      steps.push({
+        element: '#clinical-thresholds-calibrator',
+        popover: {
+          title: 'Calibración de Umbrales',
+          description: 'Ajusta los límites clínicos mínimos y máximos específicos para este paciente. Al sobrepasarse, se notificará a los doctores y se disparará la alarma.',
+          position: 'left'
+        }
+      });
+    }
+    return steps;
+  };
+
+  useTour('patient_detail_tour', getTourSteps());
 
   // Estados de datos del Paciente
   const [patient, setPatient] = useState<any>(null);
@@ -152,7 +189,10 @@ export const PatientDetailView: React.FC = () => {
     if (!lastDataTimestamp) return;
     const watchdog = setInterval(() => {
       const now = new Date().getTime();
-      if (now - lastDataTimestamp > 30000) {
+      const storedTimeout = localStorage.getItem('aura_inactivity_timeout');
+      const timeoutMs = storedTimeout ? parseInt(storedTimeout) : 30000;
+      
+      if (now - lastDataTimestamp > timeoutMs) {
         setIsDeviceActive(false);
       }
     }, 2000);
@@ -691,7 +731,7 @@ export const PatientDetailView: React.FC = () => {
           </Link>
           <div>
             <div className="flex items-center space-x-2.5">
-              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+              <h2 id="patient-header-title" className="text-2xl md:text-3xl font-extrabold tracking-tight">
                 {patient.first_name} {patient.last_name}
               </h2>
               {isDeviceActive ? (
@@ -932,7 +972,7 @@ export const PatientDetailView: React.FC = () => {
 
           {/* Card 3: Calibrador de Umbrales Clínicos (Sliders dobles reactivos) */}
           {user?.role !== 'CLIENT' && (
-            <div className="bg-glass p-6 rounded-3xl border border-[#1E2640] space-y-6">
+            <div id="clinical-thresholds-calibrator" className="bg-glass p-6 rounded-3xl border border-[#1E2640] space-y-6">
               <div className="flex items-center space-x-2 border-b border-[#1E2640]/60 pb-3">
                 <Settings className="h-4.5 w-4.5 text-[#D4AF37]" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Calibrar Umbrales</h3>
@@ -1141,6 +1181,7 @@ export const PatientDetailView: React.FC = () => {
 
                 {/* LIENZO COMPACTO: 3 PANELES APILADOS CON SYNCED CROSSHAIR Y NAVEGACIÓN INFINITA */}
                 <div 
+                  id="live-vitals-charts"
                   className="bg-[#0B0F19]/45 border border-[#1E2640] rounded-3xl p-4 space-y-4 relative select-none cursor-grab touch-none"
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}

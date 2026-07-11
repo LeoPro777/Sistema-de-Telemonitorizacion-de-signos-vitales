@@ -5,7 +5,7 @@ import {
   Heart, Menu, X, Bell, LogOut, 
   LayoutDashboard, Users, Smartphone, ShieldCheck, 
   HelpCircle, UserCog, FileBarChart, Award, Building2, UserCheck,
-  Settings, FlaskConical
+  Settings, FlaskConical, ShieldAlert
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
@@ -38,6 +38,13 @@ export const DashboardLayout: React.FC = () => {
   // Reproducir sonido de alarma médica (AudioContext)
   const playAlarmSound = () => {
     try {
+      const storedVol = localStorage.getItem('aura_alarm_volume');
+      if (storedVol === 'SILENT') return;
+
+      let vol = 0.5; // default MED
+      if (storedVol === 'LOW') vol = 0.15;
+      if (storedVol === 'HIGH') vol = 0.95;
+
       const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtxClass) return;
       
@@ -53,8 +60,8 @@ export const DashboardLayout: React.FC = () => {
       osc1.type = 'sine';
       osc1.frequency.setValueAtTime(880, now); // Tono médico de 880 Hz
       gain1.gain.setValueAtTime(0, now);
-      gain1.gain.linearRampToValueAtTime(0.8, now + 0.05);
-      gain1.gain.setValueAtTime(0.8, now + 0.25);
+      gain1.gain.linearRampToValueAtTime(vol, now + 0.05);
+      gain1.gain.setValueAtTime(vol, now + 0.25);
       gain1.gain.linearRampToValueAtTime(0, now + 0.3);
       osc1.connect(gain1);
       gain1.connect(audioCtx.destination);
@@ -67,8 +74,8 @@ export const DashboardLayout: React.FC = () => {
       osc2.type = 'sine';
       osc2.frequency.setValueAtTime(880, now + 0.4);
       gain2.gain.setValueAtTime(0, now + 0.4);
-      gain2.gain.linearRampToValueAtTime(0.8, now + 0.45);
-      gain2.gain.setValueAtTime(0.8, now + 0.65);
+      gain2.gain.linearRampToValueAtTime(vol, now + 0.45);
+      gain2.gain.setValueAtTime(vol, now + 0.65);
       gain2.gain.linearRampToValueAtTime(0, now + 0.7);
       osc2.connect(gain2);
       gain2.connect(audioCtx.destination);
@@ -216,7 +223,7 @@ export const DashboardLayout: React.FC = () => {
       { path: '/dashboard', label: 'Dashboard Hub', icon: LayoutDashboard, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
       { path: '/patients', label: 'Pacientes (M4)', icon: Users, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
       { path: '/devices', label: 'Dispositivos IoT (M5)', icon: Smartphone, roles: ['ADMIN'] },
-      { path: '/doctors', label: 'Médicos (M6)', icon: Award, roles: ['ADMIN', 'DOCTOR'] },
+      { path: '/doctors', label: 'Médicos (M6)', icon: Award, roles: ['ADMIN'] },
       { path: '/clients', label: 'Clientes (M7)', icon: Building2, roles: ['ADMIN'] },
       { path: '/applicants', label: 'Aspirantes (M8)', icon: UserCheck, roles: ['ADMIN'] },
       { path: '/audits', label: 'Auditoría Forense (M12)', icon: ShieldCheck, roles: ['ADMIN'] },
@@ -252,7 +259,7 @@ export const DashboardLayout: React.FC = () => {
         <div>
           {/* Logo superior */}
           <div className="h-16 flex items-center px-5 border-b border-[#1E2640] justify-between">
-            <div className="flex items-center space-x-3 overflow-hidden">
+            <div id="sidebar-logo" className="flex items-center space-x-3 overflow-hidden">
               <div className="h-9 w-9 bg-gradient-to-br from-[#D4AF37] to-[#AA820A] rounded-xl flex items-center justify-center border border-[#D4AF37]/25 flex-shrink-0 shadow-md">
                 <Heart className="h-4.5 w-4.5 text-black stroke-[2.5]" />
               </div>
@@ -275,7 +282,7 @@ export const DashboardLayout: React.FC = () => {
           </div>
 
           {/* Lista de Navegación */}
-          <nav className="p-4 space-y-2">
+          <nav id="sidebar-nav" className="p-4 space-y-2">
             {sidebarLinks.map((link, idx) => {
               const Icon = link.icon;
               return (
@@ -346,6 +353,30 @@ export const DashboardLayout: React.FC = () => {
       {/* PANEL DE CONTENIDO PRINCIPAL */}
       <div className="flex-grow flex flex-col min-w-0 h-full">
         
+        {/* Banner de Alarma Crítica */}
+        {criticalAlertCount > 0 && (
+          <div className={`bg-[#FF1744]/10 border-b border-[#FF1744]/30 px-6 py-2 flex items-center justify-between z-10 flex-shrink-0 ${
+            localStorage.getItem('aura_alarm_animation') === 'blink' 
+              ? 'animate-pulse border-b-[#FF1744]/60 bg-[#FF1744]/15' 
+              : localStorage.getItem('aura_alarm_animation') === 'none' 
+              ? '' 
+              : 'animate-pulse'
+          }`}>
+            <div className="flex items-center space-x-2">
+              <ShieldAlert className="h-4 w-4 text-[#FF1744] animate-bounce" />
+              <span className="text-xs font-bold text-slate-200 font-mono tracking-wider">
+                PROTOCOLO DE EMERGENCIA - {criticalAlertCount} PACIENTE(S) EN ESTADO CRÍTICO
+              </span>
+            </div>
+            <button 
+              onClick={() => setIsMuted(!isMuted)}
+              className="px-3 py-1 bg-[#FF1744]/20 hover:bg-[#FF1744]/35 text-[#FF1744] border border-[#FF1744]/40 text-[9px] font-extrabold uppercase rounded-lg tracking-wider transition-all"
+            >
+              {isMuted ? "Activar Sonido" : "Silenciar Alarma"}
+            </button>
+          </div>
+        )}
+
         {/* TOPBAR SUPERIOR */}
         <header className="h-16 bg-[#0F1420] border-b border-[#1E2640] flex items-center justify-between px-6 flex-shrink-0 z-20">
           
@@ -371,6 +402,7 @@ export const DashboardLayout: React.FC = () => {
             {/* Contador de alertas críticas globales */}
             <div className="relative">
               <button 
+                id="bell-notifications"
                 onClick={() => {
                   setIsBellDropdownOpen(!isBellDropdownOpen);
                   if (!isBellDropdownOpen) {
@@ -484,6 +516,7 @@ export const DashboardLayout: React.FC = () => {
             {/* Tuerca de Configuración y Menú Desplegable */}
             <div className="relative">
               <button 
+                id="settings-dropdown-btn"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="p-2 rounded-xl border border-[#1E2640] bg-[#0A0D15]/40 text-slate-400 hover:text-[#D4AF37] hover:border-[#D4AF37]/25 transition-all outline-none"
                 title="Configuración y Ayuda"

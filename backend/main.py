@@ -22,6 +22,7 @@ from backend.routes.support import router as support_router
 from backend.routes.profile import router as profile_router
 from backend.routes.reports import router as reports_router
 from backend.routes.audit_logs import router as audit_logs_router
+from backend.routes.users import router as users_router
 from backend.services.audit import AuditContextMiddleware
 
 
@@ -106,6 +107,7 @@ app.include_router(doctors_router, prefix="/api")
 app.include_router(clients_router, prefix="/api")
 app.include_router(support_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(audit_logs_router, prefix="/api")

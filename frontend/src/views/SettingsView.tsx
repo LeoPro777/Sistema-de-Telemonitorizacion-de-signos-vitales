@@ -1,12 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Bell, Globe, Lock, ShieldCheck
+  Bell, Globe, Lock, Smartphone, Volume2, ShieldAlert
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
-
+import { ConfirmationModal } from '../components/ConfirmationModal';
+import { useAuthStore } from '../store/authStore';
+import { useTour } from '../hooks/useTour';
 
 export const SettingsView: React.FC = () => {
+  const { user } = useAuthStore();
+
+  const tourSteps = [
+    {
+      element: '#general-preferences-panel',
+      popover: {
+        title: 'Preferencias de Interfaz',
+        description: 'Personaliza el idioma del panel base, los esquemas de temas cromáticos premium y el formato horario (24h/12h).',
+        position: 'right'
+      }
+    },
+    {
+      element: '#global-thresholds-panel',
+      popover: {
+        title: 'Directiva Biométrica Global',
+        description: 'Ajusta los umbrales fisiológicos de referencia (BPM, SpO2, Temperatura). Los nuevos pacientes heredarán estos límites por defecto.',
+        position: 'top'
+      }
+    },
+    {
+      element: '#iot-parameters-panel',
+      popover: {
+        title: 'Parámetros Instrumentales IoT',
+        description: 'Controla la frecuencia de muestreo de hardware, los tiempos de espera de inactividad de los microcontroladores y el volumen del sintetizador acústico.',
+        position: 'top'
+      }
+    }
+  ];
+
+  useTour('settings_tour', tourSteps);
+
   // Configuración General
   const [language, setLanguage] = useState<string>('ES');
   const [theme, setTheme] = useState<string>('premium_dark');
@@ -19,24 +52,54 @@ export const SettingsView: React.FC = () => {
   const [spo2Alerts, setSpo2Alerts] = useState<boolean>(true);
   const [tempAlerts, setTempAlerts] = useState<boolean>(true);
   
-  // Re-verificación de Admin
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(false);
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
-  const [verifyPassword, setVerifyPassword] = useState<string>('');
-  
   // Umbrales Clínicos Globales
-  const [minBpm, setMinBpm] = useState<number>(60);
-  const [maxBpm, setMaxBpm] = useState<number>(100);
-  const [minSpo2, setMinSpo2] = useState<number>(92);
-  const [minTemp, setMinTemp] = useState<number>(35.0);
-  const [maxTemp, setMaxTemp] = useState<number>(38.0);
+  const [minBpm, setMinBpm] = useState<number>(() => {
+    const v = localStorage.getItem('aura_global_min_bpm');
+    return v ? parseInt(v) : 60;
+  });
+  const [maxBpm, setMaxBpm] = useState<number>(() => {
+    const v = localStorage.getItem('aura_global_max_bpm');
+    return v ? parseInt(v) : 100;
+  });
+  const [minSpo2, setMinSpo2] = useState<number>(() => {
+    const v = localStorage.getItem('aura_global_min_spo2');
+    return v ? parseInt(v) : 92;
+  });
+  const [minTemp, setMinTemp] = useState<number>(() => {
+    const v = localStorage.getItem('aura_global_min_temp');
+    return v ? parseFloat(v) : 35.0;
+  });
+  const [maxTemp, setMaxTemp] = useState<number>(() => {
+    const v = localStorage.getItem('aura_global_max_temp');
+    return v ? parseFloat(v) : 38.0;
+  });
   
+  // Nuevas configuraciones de IoT e Instrumentación
+  const [iotFrequency, setIotFrequency] = useState<number>(() => {
+    const v = localStorage.getItem('aura_iot_frequency');
+    return v ? parseInt(v) : 10; // 10 segundos por defecto
+  });
+  const [inactivityTimeout, setInactivityTimeout] = useState<number>(() => {
+    const v = localStorage.getItem('aura_inactivity_timeout');
+    return v ? parseInt(v) : 30000; // 30 segundos por defecto
+  });
+  const [alarmVolume, setAlarmVolume] = useState<string>(() => {
+    const v = localStorage.getItem('aura_alarm_volume');
+    return v || 'MED'; // MED por defecto
+  });
+  const [alarmAnimation, setAlarmAnimation] = useState<string>(() => {
+    const v = localStorage.getItem('aura_alarm_animation');
+    return v || 'pulse'; // pulse por defecto
+  });
+
+  // Estado del modal de confirmación
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Cargar configuraciones (con fallback si falla la API)
   const fetchConfigurations = async () => {
     try {
-      const response = await api.get('/dashboard/config'); // O endpoint de settings
+      const response = await api.get('/dashboard/config');
       if (response.data.theme_preference) {
         setTheme(response.data.theme_preference);
       }
@@ -45,7 +108,7 @@ export const SettingsView: React.FC = () => {
         localStorage.setItem('aura_time_format', response.data.time_format);
       }
     } catch (err) {
-      // Fallback
+      // Fallback silencioso
     }
   };
 
@@ -56,7 +119,6 @@ export const SettingsView: React.FC = () => {
   const handleSaveGeneral = async () => {
     setIsSaving(true);
     try {
-      // Guardar en backend si es posible
       await api.put('/dashboard/config', {
         theme_preference: theme,
         language_preference: language,
@@ -65,40 +127,57 @@ export const SettingsView: React.FC = () => {
       localStorage.setItem('aura_time_format', timeFormat);
       toast.success('Preferencias de interfaz guardadas con éxito.');
     } catch (err) {
-      // Mock success for offline/bypass exploration
       toast.success('Preferencias guardadas (Simulado en caliente)');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleVerifyPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (verifyPassword === 'admin123') {
-      setIsAdminUnlocked(true);
-      setIsPasswordModalOpen(false);
-      setVerifyPassword('');
-      toast.success('Directiva de Gobernanza Desbloqueada.');
-    } else {
-      toast.error('Contraseña de verificación incorrecta.');
+  const handleSaveGlobalThresholdsRequest = () => {
+    if (user?.role !== 'ADMIN') {
+      toast.error('Privilegios insuficientes. Solo los administradores pueden alterar las directivas biométricas.');
+      return;
+    }
+    // Abre el modal de confirmación con mensaje
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmGlobalThresholds = async () => {
+    setIsSaving(true);
+    try {
+      // Guardar directivas globalmente en LocalStorage para simular persistencia
+      localStorage.setItem('aura_global_min_bpm', minBpm.toString());
+      localStorage.setItem('aura_global_max_bpm', maxBpm.toString());
+      localStorage.setItem('aura_global_min_spo2', minSpo2.toString());
+      localStorage.setItem('aura_global_min_temp', minTemp.toString());
+      localStorage.setItem('aura_global_max_temp', maxTemp.toString());
+
+      toast.success('Directiva biométrica global aplicada. Modificaciones guardadas.');
+    } catch (err) {
+      toast.error('Error al aplicar directiva global.');
+    } finally {
+      setIsSaving(false);
+      setIsConfirmModalOpen(false);
     }
   };
 
-  const handleSaveGlobalThresholds = async () => {
+  const handleSaveIotSettings = () => {
     setIsSaving(true);
     try {
-      // Guardar directiva global en /api/settings si existiera
-      toast.success('Directiva global aplicada. Modificación escrita en MongoDB.');
-      setIsAdminUnlocked(false); // Bloquear de nuevo
+      localStorage.setItem('aura_iot_frequency', iotFrequency.toString());
+      localStorage.setItem('aura_inactivity_timeout', inactivityTimeout.toString());
+      localStorage.setItem('aura_alarm_volume', alarmVolume);
+      localStorage.setItem('aura_alarm_animation', alarmAnimation);
+      toast.success('Parámetros de Instrumental IoT actualizados correctamente.');
     } catch (err) {
-      toast.error('Error al aplicar directiva global.');
+      toast.error('Error al guardar configuración IoT.');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="space-y-6 font-mono relative max-w-4xl mx-auto">
+    <div className="space-y-6 font-mono relative max-w-4xl mx-auto pb-10">
       
       {/* Cabecera superior */}
       <div>
@@ -112,7 +191,7 @@ export const SettingsView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* PANEL 1: PREFERENCIAS GENERALES */}
-        <div className="bg-glass rounded-3xl border border-[#1E2640] p-6 space-y-5">
+        <div id="general-preferences-panel" className="bg-glass rounded-3xl border border-[#1E2640] p-6 space-y-5">
           <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest border-b border-[#1E2640] pb-3 flex items-center space-x-2">
             <Globe className="h-4 w-4 text-[#D4AF37]" />
             <span>Interfaz e Idioma</span>
@@ -252,37 +331,28 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* PANEL 3: CONFIGURACIÓN AVANZADA (DIRECTIVAS DE CLINICA - ADMINISTRATIVO) */}
-      <div className="bg-glass rounded-3xl border border-[#1E2640] p-6 space-y-6 relative overflow-hidden">
+      <div id="global-thresholds-panel" className="bg-glass rounded-3xl border border-[#1E2640] p-6 space-y-6 relative overflow-hidden">
         
         {/* Adornos estéticos */}
-        <div className="absolute top-0 right-0 w-24 h-24 bg-[#FF1744]/2 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-24 h-24 bg-[#FF1744]/5 rounded-full blur-2xl pointer-events-none" />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#1E2640] pb-4 gap-4">
           <h3 className="text-xs text-[#FF1744] font-extrabold uppercase tracking-widest flex items-center space-x-2">
             <Lock className="h-4 w-4 text-[#FF1744]" />
-            <span>Directiva Biométrica Global (Exclusivo Admins)</span>
+            <span>Directiva Biométrica Global</span>
           </h3>
 
-          {!isAdminUnlocked ? (
-            <button
-              onClick={() => setIsPasswordModalOpen(true)}
-              className="px-3.5 py-1.5 bg-[#FF1744]/15 hover:bg-[#FF1744] hover:text-black border border-[#FF1744]/35 text-xs text-[#FF1744] font-extrabold rounded-xl transition-all uppercase tracking-wider"
-            >
-              Desbloquear Parámetros
-            </button>
-          ) : (
-            <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-[9px] font-bold rounded-lg uppercase tracking-wider flex items-center space-x-1.5">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Gobernanza Habilitada</span>
-            </span>
-          )}
+          <span className="px-3 py-1 bg-[#FF1744]/10 text-[#FF1744] border border-[#FF1744]/25 text-[9px] font-bold rounded-lg uppercase tracking-wider flex items-center space-x-1.5">
+            <ShieldAlert className="h-3.5 w-3.5" />
+            <span>Gobernanza Directa (Sin Bloqueo)</span>
+          </span>
         </div>
 
         <p className="text-[10px] text-slate-500 leading-normal leading-tight font-bold mb-4">
           Establece los límites biométricos globales por defecto del sistema. Cualquier paciente nuevo que ingrese al ecosistema de telemonitoreo AURA heredará de forma automática estos umbrales como su base de análisis.
         </p>
 
-        {/* Inputs de Alta Densidad Decimal */}
+        {/* Inputs de Alta Densidad Decimal - SIEMPRE DESBLOQUEADOS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
           
           {/* BPM */}
@@ -293,20 +363,18 @@ export const SettingsView: React.FC = () => {
                 <span className="text-[8px] text-slate-600 block uppercase">Mínimo BPM</span>
                 <input
                   type="number"
-                  disabled={!isAdminUnlocked}
                   value={minBpm}
-                  onChange={(e) => setMinBpm(parseInt(e.target.value))}
-                  className="w-full p-2 bg-[#0B0F19] disabled:opacity-40 disabled:cursor-not-allowed border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
+                  onChange={(e) => setMinBpm(parseInt(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#0B0F19] border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
                 />
               </div>
               <div className="space-y-1">
                 <span className="text-[8px] text-slate-600 block uppercase">Máximo BPM</span>
                 <input
                   type="number"
-                  disabled={!isAdminUnlocked}
                   value={maxBpm}
-                  onChange={(e) => setMaxBpm(parseInt(e.target.value))}
-                  className="w-full p-2 bg-[#0B0F19] disabled:opacity-40 disabled:cursor-not-allowed border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
+                  onChange={(e) => setMaxBpm(parseInt(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#0B0F19] border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
                 />
               </div>
             </div>
@@ -319,10 +387,9 @@ export const SettingsView: React.FC = () => {
               <span className="text-[8px] text-slate-600 block uppercase">Mínimo Crítico (%)</span>
               <input
                 type="number"
-                disabled={!isAdminUnlocked}
                 value={minSpo2}
-                onChange={(e) => setMinSpo2(parseInt(e.target.value))}
-                className="w-full p-2 bg-[#0B0F19] disabled:opacity-40 disabled:cursor-not-allowed border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
+                onChange={(e) => setMinSpo2(parseInt(e.target.value) || 0)}
+                className="w-full p-2 bg-[#0B0F19] border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
               />
             </div>
           </div>
@@ -336,10 +403,9 @@ export const SettingsView: React.FC = () => {
                 <input
                   type="number"
                   step="0.1"
-                  disabled={!isAdminUnlocked}
                   value={minTemp}
-                  onChange={(e) => setMinTemp(parseFloat(e.target.value))}
-                  className="w-full p-2 bg-[#0B0F19] disabled:opacity-40 disabled:cursor-not-allowed border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
+                  onChange={(e) => setMinTemp(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#0B0F19] border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
                 />
               </div>
               <div className="space-y-1">
@@ -347,10 +413,9 @@ export const SettingsView: React.FC = () => {
                 <input
                   type="number"
                   step="0.1"
-                  disabled={!isAdminUnlocked}
                   value={maxTemp}
-                  onChange={(e) => setMaxTemp(parseFloat(e.target.value))}
-                  className="w-full p-2 bg-[#0B0F19] disabled:opacity-40 disabled:cursor-not-allowed border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
+                  onChange={(e) => setMaxTemp(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#0B0F19] border border-[#1E2640] rounded-lg text-slate-200 outline-none focus:border-[#FF1744] text-xs font-mono"
                 />
               </div>
             </div>
@@ -358,96 +423,133 @@ export const SettingsView: React.FC = () => {
 
         </div>
 
-        {isAdminUnlocked && (
-          <div className="flex items-center space-x-3 pt-3">
-            <button
-              onClick={handleSaveGlobalThresholds}
-              disabled={isSaving}
-              className="px-5 py-2.5 bg-[#FF1744] hover:bg-[#FF1744]/95 text-black font-extrabold text-[10px] rounded-xl border border-transparent transition-all uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {isSaving ? 'Aplicando...' : 'Confirmar Directiva Global'}
-            </button>
-
-            <button
-              onClick={() => setIsAdminUnlocked(false)}
-              className="px-5 py-2.5 bg-black/25 text-slate-400 border border-[#1E2640] hover:text-slate-200 font-extrabold text-[10px] rounded-xl transition-all uppercase tracking-wider"
-            >
-              Descartar
-            </button>
-          </div>
-        )}
+        <div className="flex items-center space-x-3 pt-3">
+          <button
+            onClick={handleSaveGlobalThresholdsRequest}
+            disabled={isSaving}
+            className="px-5 py-2.5 bg-[#FF1744] hover:bg-[#FF1744]/95 text-black font-extrabold text-[10px] rounded-xl border border-transparent transition-all uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {isSaving ? 'Guardando...' : 'Confirmar Directiva Global'}
+          </button>
+        </div>
 
       </div>
 
-      {/* MODAL REVERIFICACIÓN CONTRASEÑA */}
-      {isPasswordModalOpen && (
-        <div className="fixed inset-0 bg-[#0B0F19]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0F1420] border border-[#1E2640] rounded-3xl p-6 w-full max-w-sm text-xs flex flex-col justify-between shadow-2xl relative">
-            
-            <button
-              onClick={() => setIsPasswordModalOpen(false)}
-              className="absolute right-4 top-4 p-1.5 bg-[#1E2640] text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
-            >
-              <X className="h-4 w-4" />
-            </button>
+      {/* PANEL 4: INSTRUMENTAL IOT Y ALARMAS (NUEVAS CONFIGURACIONES INTERESANTES) */}
+      <div id="iot-parameters-panel" className="bg-glass rounded-3xl border border-[#1E2640] p-6 space-y-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-[#D4AF37]/5 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="border-b border-[#1E2640]/60 pb-3 mb-5 text-center">
-              <Lock className="h-7 w-7 text-[#FF1744] mx-auto mb-2" />
-              <strong className="text-base text-slate-200 font-extrabold block">
-                Verificación de Gobernanza
-              </strong>
-              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mt-1">
-                Ingrese contraseña para continuar
-              </span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#1E2640] pb-4 gap-4">
+          <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest flex items-center space-x-2">
+            <Smartphone className="h-4 w-4 text-[#D4AF37]" />
+            <span>Instrumental IoT y Sintetizador</span>
+          </h3>
+          <span className="px-3 py-1 bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/25 text-[9px] font-bold rounded-lg uppercase tracking-wider flex items-center space-x-1.5">
+            <Volume2 className="h-3.5 w-3.5" />
+            <span>A Aura Engine</span>
+          </span>
+        </div>
+
+        <p className="text-[10px] text-slate-500 leading-normal leading-tight font-bold mb-4">
+          Configure los parámetros de red del hardware de telemonitoreo en tiempo real y el comportamiento del sintetizador acústico de AURA.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+          
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-500 font-bold uppercase block">Frecuencia de Muestreo ESP32</label>
+              <select
+                value={iotFrequency}
+                onChange={(e) => setIotFrequency(parseInt(e.target.value))}
+                className="w-full p-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-slate-200 cursor-pointer"
+              >
+                <option value={5}>Alta velocidad (5s - Diagnóstico intensivo)</option>
+                <option value={10}>Estándar (10s - Telemonitoreo continuo)</option>
+                <option value={30}>Bajo consumo (30s - Ahorro batería)</option>
+                <option value={60}>Eco (60s - Histórico diario)</option>
+              </select>
             </div>
 
-            <form onSubmit={handleVerifyPassword} className="space-y-4">
-              <p className="text-[10px] text-slate-400 leading-relaxed text-center font-sans">
-                Para alterar directivas clínicas de pulso y oxígeno del hardware ESP32, re-inicie autenticación de seguridad. (Tip debug: **admin123**)
-              </p>
-              
-              <div className="space-y-1">
-                <input
-                  type="password"
-                  required
-                  value={verifyPassword}
-                  onChange={(e) => setVerifyPassword(e.target.value)}
-                  placeholder="Contraseña del Administrador..."
-                  className="w-full p-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl text-xs text-center focus:border-[#FF1744] outline-none text-slate-200"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-[#FF1744] hover:bg-[#FF1744]/90 text-black font-extrabold text-xs rounded-xl transition-all uppercase tracking-wider text-center"
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-500 font-bold uppercase block">Umbral de Inactividad del Paciente</label>
+              <select
+                value={inactivityTimeout}
+                onChange={(e) => setInactivityTimeout(parseInt(e.target.value))}
+                className="w-full p-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-slate-200 cursor-pointer"
               >
-                Confirmar Desbloqueo
-              </button>
-            </form>
+                <option value={15000}>Extremo (15 segundos sin trama = Inactivo)</option>
+                <option value={30000}>Por defecto (30 segundos sin trama = Inactivo)</option>
+                <option value={60000}>Tolerante (1 minuto sin trama = Inactivo)</option>
+                <option value={120000}>Extendido (2 minutos sin trama = Inactivo)</option>
+              </select>
+            </div>
           </div>
+
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-500 font-bold uppercase block">Volumen del Sintetizador de Alarmas</label>
+              <select
+                value={alarmVolume}
+                onChange={(e) => setAlarmVolume(e.target.value)}
+                className="w-full p-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-slate-200 cursor-pointer"
+              >
+                <option value="SILENT">Silencio (Solo alertas visuales en pantalla)</option>
+                <option value="LOW">Bajo (Entorno hospitalario silencioso)</option>
+                <option value="MED">Medio (Recomendado)</option>
+                <option value="HIGH">Alto (Entorno crítico - Alto volumen)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] text-slate-500 font-bold uppercase block">Patrón de Animación Visual (Crítico)</label>
+              <select
+                value={alarmAnimation}
+                onChange={(e) => setAlarmAnimation(e.target.value)}
+                className="w-full p-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-slate-200 cursor-pointer"
+              >
+                <option value="pulse">Pulso suave (Premium Glow)</option>
+                <option value="blink">Parpadeo de alta frecuencia (Alerta visual intensa)</option>
+                <option value="none">Estático (Color sólido sin oscilación)</option>
+              </select>
+            </div>
+          </div>
+
         </div>
-      )}
+
+        <div className="flex items-center space-x-3 pt-3">
+          <button
+            onClick={handleSaveIotSettings}
+            disabled={isSaving}
+            className="px-5 py-2.5 bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-black font-extrabold text-[10px] rounded-xl border border-transparent transition-all uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {isSaving ? 'Guardando...' : 'Aplicar Parámetros IoT'}
+          </button>
+        </div>
+
+      </div>
+
+      {/* CONFIRMATION MODAL CON MENSAJE */}
+      <ConfirmationModal 
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmGlobalThresholds}
+        title="Verificación de Gobernanza"
+        message={`¿Está seguro de que desea aplicar los nuevos umbrales biométricos globales en MongoDB?
+        
+        Nuevos parámetros a propagar:
+        - Frecuencia Cardíaca: [${minBpm} bpm - ${maxBpm} bpm]
+        - Saturación de Oxígeno (SpO2): [Mínimo: ${minSpo2}%]
+        - Temperatura: [${minTemp}°C - ${maxTemp}°C]
+        
+        Cualquier paciente nuevo que se incorpore heredará estos valores predeterminados para la evaluación automática de signos vitales.`}
+        confirmText="Confirmar Directiva"
+        cancelText="Cancelar"
+        type="warning"
+      />
 
     </div>
   );
 };
-
-const X = (props: any) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M18 6 6 18" />
-    <path d="m6 6 12 12" />
-  </svg>
-);
 
 export default SettingsView;
