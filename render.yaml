@@ -1,0 +1,32 @@
+# =============================================================================
+# render.yaml — Render Blueprint Specification
+# =============================================================================
+services:
+  - type: web
+    name: aura-telemonitorizacion
+    env: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    numReplicas: 1
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: MONGO_DB
+        value: telemonitorizacion
+      - key: MONGO_URI
+        sync: false
+        placeholder: "Ingresa tu URI de MongoDB Atlas (mongodb+srv://...)"
+      - key: REDIS_URL
+        value: redis://localhost:6379/0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+        placeholder: "Ingresa tu Google Client ID de OAuth"
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+        placeholder: "Ingresa tu Google Client Secret de OAuth"

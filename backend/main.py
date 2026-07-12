@@ -120,3 +120,29 @@ async def health_check():
     return {"status": "ok"}
 
 
+# Servir archivos estáticos de React en producción (despliegue en contenedor único)
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "dist")
+
+if os.path.exists(frontend_dir):
+    # Montar la carpeta de assets de Vite
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dir, "assets")), name="assets")
+
+    # Enrutador catch-all para SPA (React Router) y otros archivos estáticos
+    @app.get("/{file_name:path}")
+    async def serve_static(file_name: str):
+        # Si la ruta no tiene extensión (es una ruta de la SPA como /dashboard, /patients, etc.)
+        if not file_name or file_name in ["", "/"] or "." not in file_name:
+            return FileResponse(os.path.join(frontend_dir, "index.html"))
+        
+        file_path = os.path.join(frontend_dir, file_name)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+            
+        return FileResponse(os.path.join(frontend_dir, "index.html"))
+
+
+

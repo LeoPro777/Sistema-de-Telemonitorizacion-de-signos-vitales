@@ -65,6 +65,7 @@ export const PatientDetailView: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'GRAFICOS' | 'ALERTAS' | 'FICHA'>('GRAFICOS');
+  const [selectedMetric, setSelectedMetric] = useState<'PULSO' | 'SPO2' | 'TEMP'>('PULSO');
 
   // Estados de control de tiempo (Segmentación y Línea de tiempo)
   const [timeWindow, setTimeWindow] = useState<number>(900); // Ventana deslizante por defecto a 15m (900s)
@@ -783,7 +784,7 @@ export const PatientDetailView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* COLUMNA 1: PERFIL Y CONTROL (25% -> lg:col-span-3) */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="order-2 lg:order-1 lg:col-span-3 space-y-6">
 
           {/* Card 1: Perfil Clínico Fijo */}
           <div className={`p-6 rounded-3xl border bg-glass flex flex-col justify-between transition-all ${
@@ -1142,7 +1143,7 @@ export const PatientDetailView: React.FC = () => {
         </div>
 
         {/* TABS & CONTENIDO DERECHO (75% -> lg:col-span-9) */}
-        <div className="lg:col-span-9 space-y-6">
+        <div className="order-1 lg:order-2 lg:col-span-9 space-y-6">
 
           {/* Navegación por Pestañas */}
           <div className="flex bg-[#0F1420] p-1.5 rounded-2xl border border-[#1E2640] space-x-2">
@@ -1201,12 +1202,51 @@ export const PatientDetailView: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Selector de Variable Biométrica en Móvil */}
+                  <div className="flex sm:hidden bg-[#0A0D15] p-1 rounded-xl border border-[#1E2640] mb-2 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMetric('PULSO')}
+                      className={`flex-grow py-2 text-[10px] font-bold uppercase rounded-lg transition-all ${
+                        selectedMetric === 'PULSO' 
+                          ? 'bg-[#1E2640] text-[#FF1744] border border-[#FF1744]/35 shadow-md shadow-[#FF1744]/5'
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      ❤️ Pulso
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMetric('SPO2')}
+                      className={`flex-grow py-2 text-[10px] font-bold uppercase rounded-lg transition-all ${
+                        selectedMetric === 'SPO2' 
+                          ? 'bg-[#1E2640] text-[#00F2FE] border border-[#00F2FE]/30 shadow-md shadow-[#00F2FE]/5'
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      🌀 SpO2
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMetric('TEMP')}
+                      className={`flex-grow py-2 text-[10px] font-bold uppercase rounded-lg transition-all ${
+                        selectedMetric === 'TEMP' 
+                          ? 'bg-[#1E2640] text-amber-400 border border-amber-500/30 shadow-md shadow-amber-500/5'
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      🌡️ Temp
+                    </button>
+                  </div>
+
                   {/* Panel 1: Frecuencia Cardíaca */}
                   {(() => {
                     const currentHR = patient.last_telemetry_cache?.heart_rate?.value || 75;
                     const isHRCritical = currentHR < minBpm || currentHR > maxBpm;
                     return (
                       <div className={`p-3 rounded-2xl border transition-all ${
+                        selectedMetric === 'PULSO' ? 'block' : 'hidden sm:block'
+                      } ${
                         isHRCritical && !isFalsePositive ? 'border-[#FF1744]/40 bg-[#FF1744]/5 animate-pulse' : 'border-[#1E2640]/50 bg-black/20'
                       }`}>
                         <div className="flex justify-between items-center mb-2">
@@ -1247,6 +1287,8 @@ export const PatientDetailView: React.FC = () => {
                     const isSpO2Critical = currentSpO2 < critSpo2;
                     return (
                       <div className={`p-3 rounded-2xl border transition-all ${
+                        selectedMetric === 'SPO2' ? 'block' : 'hidden sm:block'
+                      } ${
                         isSpO2Critical && !isFalsePositive ? 'border-[#FF1744]/40 bg-[#FF1744]/5 animate-pulse' : 'border-[#1E2640]/50 bg-black/20'
                       }`}>
                         <div className="flex justify-between items-center mb-2">
@@ -1285,6 +1327,8 @@ export const PatientDetailView: React.FC = () => {
                     const isTempCritical = currentTemp < minTemp || currentTemp > maxTemp;
                     return (
                       <div className={`p-3 rounded-2xl border transition-all ${
+                        selectedMetric === 'TEMP' ? 'block' : 'hidden sm:block'
+                      } ${
                         isTempCritical && !isFalsePositive ? 'border-[#FF1744]/40 bg-[#FF1744]/5 animate-pulse' : 'border-[#1E2640]/50 bg-black/20'
                       }`}>
                         <div className="flex justify-between items-center mb-2">

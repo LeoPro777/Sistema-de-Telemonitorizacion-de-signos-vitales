@@ -378,7 +378,7 @@ export const DashboardLayout: React.FC = () => {
         )}
 
         {/* TOPBAR SUPERIOR */}
-        <header className="h-16 bg-[#0F1420] border-b border-[#1E2640] flex items-center justify-between px-6 flex-shrink-0 z-20">
+        <header className="h-16 bg-[#0F1420] border-b border-[#1E2640] flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-20">
           
           {/* Lado Izquierdo: Buscador o botón menú en móvil */}
           <div className="flex items-center space-x-4">
@@ -572,7 +572,7 @@ export const DashboardLayout: React.FC = () => {
 
 
         {/* SUBVISTAS DINÁMICAS (OUTLET) */}
-        <main className="flex-grow p-6 md:p-8 overflow-y-auto relative">
+        <main className="flex-grow p-3.5 md:p-8 overflow-y-auto relative">
           <Outlet />
         </main>
       </div>

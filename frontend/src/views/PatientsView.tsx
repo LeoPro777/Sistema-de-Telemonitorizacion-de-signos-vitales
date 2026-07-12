@@ -253,10 +253,10 @@ export const PatientsView: React.FC = () => {
       </div>
 
       {/* Barra de Filtros */}
-      <div className="bg-glass p-5 rounded-3xl border border-[#1E2640] flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-glass p-3 md:p-5 rounded-2xl md:rounded-3xl border border-[#1E2640] flex flex-col sm:flex-row gap-3 items-center justify-between">
         
         {/* Buscador Semántico */}
-        <div className="relative w-full md:w-96">
+        <div className="relative w-full sm:w-72 md:w-96">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
             <Search className="h-4.5 w-4.5" />
           </div>
@@ -266,17 +266,17 @@ export const PatientsView: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por expediente, RUN o nombre..."
-            className="w-full pl-10 pr-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl text-sm focus:border-[#D4AF37] outline-none transition-all placeholder:text-slate-600"
+            className="w-full pl-10 pr-4 py-2 bg-[#0B0F19] border border-[#1E2640] rounded-xl text-xs focus:border-[#D4AF37] outline-none transition-all placeholder:text-slate-600"
           />
         </div>
 
         {/* Píldoras de Filtrado por Criticidad */}
-        <div id="criticality-filters" className="flex items-center space-x-3 w-full md:w-auto overflow-x-auto py-1">
+        <div id="criticality-filters" className="flex items-center space-x-2 w-full sm:w-auto overflow-x-auto py-0.5 justify-start sm:justify-end">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden lg:inline">Criticidad:</span>
           
           <button
             onClick={() => setCriticality('')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
               criticality === '' 
                 ? 'bg-[#D4AF37] border-[#D4AF37] text-black shadow-md shadow-[#D4AF37]/10' 
                 : 'bg-[#0B0F19] border-[#1E2640] text-slate-400 hover:text-slate-200'
@@ -287,7 +287,7 @@ export const PatientsView: React.FC = () => {
           
           <button
             onClick={() => setCriticality('CRITICAL')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center space-x-1.5 ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center space-x-1 ${
               criticality === 'CRITICAL' 
                 ? 'bg-[#FF1744] border-[#FF1744] text-white shadow-md shadow-[#FF1744]/15 animate-pulse' 
                 : 'bg-[#0B0F19] border-[#1E2640] text-[#FF1744] hover:bg-[#FF1744]/5'
@@ -299,7 +299,7 @@ export const PatientsView: React.FC = () => {
           
           <button
             onClick={() => setCriticality('NORMAL')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center space-x-1.5 ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center space-x-1 ${
               criticality === 'NORMAL' 
                 ? 'bg-[#00F2FE]/20 border-[#00F2FE]/40 text-[#00F2FE] shadow-md shadow-[#00F2FE]/10' 
                 : 'bg-[#0B0F19] border-[#1E2640] text-slate-400 hover:text-slate-200'
@@ -326,127 +326,214 @@ export const PatientsView: React.FC = () => {
         <>
           {/* MODO 1: GRId DE TARJETAS (CARDS) */}
           {viewType === 'CARDS' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {patients.map((patient) => {
-                const live = liveData[patient._id];
-                const cache = live?.cache || patient.last_telemetry_cache || {};
-                const hasAlert = live ? live.hasAlert : patient.has_active_alert;
-                const isDeviceActive = live !== undefined ? live.isDeviceActive : (patient.is_online === true);
-                
-                return (
-                  <button
-                    key={patient._id}
-                    onClick={() => navigate(`/patients/${patient._id}`)}
-                    className={`bg-glass p-6 rounded-3xl border text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden ${
-                      !isDeviceActive ? 'grayscale opacity-60' : ''
-                    } ${
-                      hasAlert 
-                        ? 'border-[#FF1744]/40 bg-[#FF1744]/5 shadow-[0_0_15px_rgba(255,23,68,0.08)]' 
-                        : 'border-[#1E2640] hover:border-[#D4AF37]/30'
-                    }`}
-                  >
-                    <div>
-                      {/* Cabecera Tarjeta: Avatar reactivo */}
-                      <div className="flex justify-between items-start">
-                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border transition-all ${
-                          hasAlert 
-                            ? 'bg-[#FF1744]/20 border-[#FF1744] text-[#FF1744] animate-pulse' 
-                            : 'bg-[#1E2640] border-[#1E2640] text-slate-400 group-hover:text-slate-200'
-                        }`}>
-                          {hasAlert ? <AlertTriangle className="h-5 w-5 animate-bounce" /> : <User className="h-5.5 w-5.5" />}
+            <>
+              {/* Vista para Pantallas Grandes (Desktop Grid) */}
+              <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {patients.map((patient) => {
+                  const live = liveData[patient._id];
+                  const cache = live?.cache || patient.last_telemetry_cache || {};
+                  const hasAlert = live ? live.hasAlert : patient.has_active_alert;
+                  const isDeviceActive = live !== undefined ? live.isDeviceActive : (patient.is_online === true);
+                  
+                  return (
+                    <button
+                      key={patient._id}
+                      onClick={() => navigate(`/patients/${patient._id}`)}
+                      className={`bg-glass p-6 rounded-3xl border text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden ${
+                        !isDeviceActive ? 'grayscale opacity-60' : ''
+                      } ${
+                        hasAlert 
+                          ? 'border-[#FF1744]/40 bg-[#FF1744]/5 shadow-[0_0_15px_rgba(255,23,68,0.08)]' 
+                          : 'border-[#1E2640] hover:border-[#D4AF37]/30'
+                      }`}
+                    >
+                      <div>
+                        {/* Cabecera Tarjeta: Avatar reactivo */}
+                        <div className="flex justify-between items-start">
+                          <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border transition-all ${
+                            hasAlert 
+                              ? 'bg-[#FF1744]/20 border-[#FF1744] text-[#FF1744] animate-pulse' 
+                              : 'bg-[#1E2640] border-[#1E2640] text-slate-400 group-hover:text-slate-200'
+                          }`}>
+                            {hasAlert ? <AlertTriangle className="h-5 w-5 animate-bounce" /> : <User className="h-5.5 w-5.5" />}
+                          </div>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-black/30 border border-[#1E2640] text-slate-500">
+                            {patient.medical_record_id}
+                          </span>
                         </div>
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-black/30 border border-[#1E2640] text-slate-500">
-                          {patient.medical_record_id}
-                        </span>
+
+                        {/* Nombre y Expediente */}
+                        <div className="mt-4">
+                          <h4 className="text-sm font-extrabold text-slate-200 group-hover:text-white transition-colors truncate">
+                            {patient.first_name} {patient.last_name}
+                          </h4>
+                          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">RUN: {patient.national_id}</p>
+                        </div>
                       </div>
 
-                      {/* Nombre y Expediente */}
-                      <div className="mt-4">
-                        <h4 className="text-sm font-extrabold text-slate-200 group-hover:text-white transition-colors truncate">
-                          {patient.first_name} {patient.last_name}
-                        </h4>
-                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">RUN: {patient.national_id}</p>
-                      </div>
-                    </div>
+                      {/* Resumen de telemetría cacheada (3 barras horizontales) */}
+                      <div className="my-6 space-y-3.5 border-y border-[#1E2640]/50 py-4">
+                        
+                        {/* Barra 1: heart_rate */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-slate-500 font-semibold flex items-center space-x-1">
+                              <Heart className="h-3 w-3 text-[#FF1744]" />
+                              <span>Pulso</span>
+                            </span>
+                            <strong className={getStatusColor(cache.heart_rate?.status)}>
+                              {cache.heart_rate?.value ? `${cache.heart_rate.value} bpm` : 'N/A'}
+                            </strong>
+                          </div>
+                          <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                cache.heart_rate?.status === 'CRITICAL' ? 'bg-[#FF1744] animate-pulse' : 'bg-[#FF1744]'
+                              }`}
+                              style={{ width: `${Math.min((cache.heart_rate?.value || 0) / 120 * 100, 100)}%` }}
+                            />
+                          </div>
+                        </div>
 
-                    {/* Resumen de telemetría cacheada (3 barras horizontales) */}
-                    <div className="my-6 space-y-3.5 border-y border-[#1E2640]/50 py-4">
-                      
-                      {/* Barra 1: heart_rate */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-500 font-semibold flex items-center space-x-1">
+                        {/* Barra 2: spo2 */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-slate-500 font-semibold flex items-center space-x-1">
+                              <Activity className="h-3 w-3 text-[#00F2FE]" />
+                              <span>SpO2</span>
+                            </span>
+                            <strong className={getStatusColor(cache.spo2?.status)}>
+                              {cache.spo2?.value ? `${cache.spo2.value}%` : 'N/A'}
+                            </strong>
+                          </div>
+                          <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                cache.spo2?.status === 'CRITICAL' ? 'bg-[#FF1744] animate-pulse' : 'bg-[#00F2FE]'
+                              }`}
+                              style={{ width: `${cache.spo2?.value || 0}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Barra 3: temperature */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-slate-500 font-semibold flex items-center space-x-1">
+                              <Thermometer className="h-3 w-3 text-amber-400" />
+                              <span>Temp</span>
+                            </span>
+                            <strong className={getStatusColor(cache.temperature?.status)}>
+                              {cache.temperature?.value ? `${cache.temperature.value}°C` : 'N/A'}
+                            </strong>
+                          </div>
+                          <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                cache.temperature?.status === 'CRITICAL' ? 'bg-[#FF1744] animate-pulse' : 'bg-[#FFB300]'
+                              }`}
+                              style={{ width: `${((cache.temperature?.value || 36.5) - 34) / 6 * 100}%` }}
+                            />
+                          </div>
+                        </div>
+
+                      </div>
+
+                      {/* Footer Tarjeta: Acceso rápido */}
+                      <div className="text-[10px] font-semibold text-slate-500 group-hover:text-[#D4AF37] flex items-center justify-between w-full transition-colors">
+                        <span>Inspeccionar expediente</span>
+                        <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                      </div>
+
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Vista Compacta para Móviles (Mobile List Layout) */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                {patients.map((patient) => {
+                  const live = liveData[patient._id];
+                  const cache = live?.cache || patient.last_telemetry_cache || {};
+                  const hasAlert = live ? live.hasAlert : patient.has_active_alert;
+                  const isDeviceActive = live !== undefined ? live.isDeviceActive : (patient.is_online === true);
+                  
+                  return (
+                    <button
+                      key={patient._id}
+                      onClick={() => navigate(`/patients/${patient._id}`)}
+                      className={`bg-glass p-3 rounded-2xl border text-left flex flex-col gap-2 transition-all outline-none relative overflow-hidden ${
+                        !isDeviceActive ? 'grayscale opacity-60' : ''
+                      } ${
+                        hasAlert 
+                          ? 'border-[#FF1744]/45 bg-[#FF1744]/5 shadow-[0_0_10px_rgba(255,23,68,0.08)]' 
+                          : 'border-[#1E2640] hover:border-[#D4AF37]/35'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center w-full">
+                        <div className="flex items-center space-x-2.5 min-w-0">
+                          <div className={`h-8 w-8 rounded-xl flex items-center justify-center border flex-shrink-0 ${
+                            hasAlert 
+                              ? 'bg-[#FF1744]/20 border-[#FF1744] text-[#FF1744] animate-pulse' 
+                              : 'bg-[#1E2640] border-[#1E2640] text-slate-400'
+                          }`}>
+                            {hasAlert ? <AlertTriangle className="h-4 w-4 animate-bounce" /> : <User className="h-4 w-4" />}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-slate-200 truncate">
+                              {patient.first_name} {patient.last_name}
+                            </h4>
+                            <p className="text-[9px] text-slate-500 font-mono">
+                              {patient.medical_record_id} &bull; RUN: {patient.national_id}
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                      </div>
+
+                      {/* Mini Indicadores de Telemetría */}
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#1E2640]/40">
+                        {/* Pulso Mini Badge */}
+                        <div className={`px-2 py-1 rounded-lg border flex items-center justify-between ${
+                          cache.heart_rate?.status === 'CRITICAL' ? 'bg-[#FF1744]/15 border-[#FF1744]/35 text-[#FF1744] animate-pulse' :
+                          cache.heart_rate?.status === 'WARNING' ? 'bg-[#FFD700]/15 border-[#FFD700]/30 text-[#FFD700]' : 'bg-[#0F1420] border-[#1E2640] text-slate-300'
+                        } text-[9px] font-mono font-semibold`}>
+                          <span className="flex items-center space-x-1">
                             <Heart className="h-3 w-3 text-[#FF1744]" />
-                            <span>Pulso</span>
+                            <span className="text-[8px] text-slate-500 font-sans hidden xs:inline">BPM</span>
                           </span>
-                          <strong className={getStatusColor(cache.heart_rate?.status)}>
-                            {cache.heart_rate?.value ? `${cache.heart_rate.value} bpm` : 'N/A'}
-                          </strong>
+                          <span>{cache.heart_rate?.value || '--'}</span>
                         </div>
-                        <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              cache.heart_rate?.status === 'CRITICAL' ? 'bg-[#FF1744] animate-pulse' : 'bg-[#FF1744]'
-                            }`}
-                            style={{ width: `${Math.min((cache.heart_rate?.value || 0) / 120 * 100, 100)}%` }}
-                          />
-                        </div>
-                      </div>
 
-                      {/* Barra 2: spo2 */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-500 font-semibold flex items-center space-x-1">
+                        {/* SpO2 Mini Badge */}
+                        <div className={`px-2 py-1 rounded-lg border flex items-center justify-between ${
+                          cache.spo2?.status === 'CRITICAL' ? 'bg-[#FF1744]/15 border-[#FF1744]/35 text-[#FF1744] animate-pulse' :
+                          cache.spo2?.status === 'WARNING' ? 'bg-[#FFD700]/15 border-[#FFD700]/30 text-[#FFD700]' : 'bg-[#0F1420] border-[#1E2640] text-[#00F2FE]'
+                        } text-[9px] font-mono font-semibold`}>
+                          <span className="flex items-center space-x-1">
                             <Activity className="h-3 w-3 text-[#00F2FE]" />
-                            <span>SpO2</span>
+                            <span className="text-[8px] text-slate-500 font-sans hidden xs:inline">SpO2</span>
                           </span>
-                          <strong className={getStatusColor(cache.spo2?.status)}>
-                            {cache.spo2?.value ? `${cache.spo2.value}%` : 'N/A'}
-                          </strong>
+                          <span>{cache.spo2?.value ? `${cache.spo2.value}%` : '--'}</span>
                         </div>
-                        <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              cache.spo2?.status === 'CRITICAL' ? 'bg-[#FF1744] animate-pulse' : 'bg-[#00F2FE]'
-                            }`}
-                            style={{ width: `${cache.spo2?.value || 0}%` }}
-                          />
-                        </div>
-                      </div>
 
-                      {/* Barra 3: temperature */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-500 font-semibold flex items-center space-x-1">
+                        {/* Temp Mini Badge */}
+                        <div className={`px-2 py-1 rounded-lg border flex items-center justify-between ${
+                          cache.temperature?.status === 'CRITICAL' ? 'bg-[#FF1744]/15 border-[#FF1744]/35 text-[#FF1744] animate-pulse' :
+                          cache.temperature?.status === 'WARNING' ? 'bg-[#FFD700]/15 border-[#FFD700]/30 text-[#FFD700]' : 'bg-[#0F1420] border-[#1E2640] text-amber-400'
+                        } text-[9px] font-mono font-semibold`}>
+                          <span className="flex items-center space-x-1">
                             <Thermometer className="h-3 w-3 text-amber-400" />
-                            <span>Temp</span>
+                            <span className="text-[8px] text-slate-500 font-sans hidden xs:inline">T°</span>
                           </span>
-                          <strong className={getStatusColor(cache.temperature?.status)}>
-                            {cache.temperature?.value ? `${cache.temperature.value}°C` : 'N/A'}
-                          </strong>
-                        </div>
-                        <div className="w-full bg-black/30 h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              cache.temperature?.status === 'CRITICAL' ? 'bg-[#FF1744] animate-pulse' : 'bg-[#FFB300]'
-                            }`}
-                            style={{ width: `${((cache.temperature?.value || 36.5) - 34) / 6 * 100}%` }}
-                          />
+                          <span>{cache.temperature?.value ? `${cache.temperature.value}°C` : '--'}</span>
                         </div>
                       </div>
-
-                    </div>
-
-                    {/* Footer Tarjeta: Acceso rápido */}
-                    <div className="text-[10px] font-semibold text-slate-500 group-hover:text-[#D4AF37] flex items-center justify-between w-full transition-colors">
-                      <span>Inspeccionar expediente</span>
-                      <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                    </div>
-
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           )}
 
           {/* MODO 2: TABLA DE ALTA DENSIDAD (LIST) */}

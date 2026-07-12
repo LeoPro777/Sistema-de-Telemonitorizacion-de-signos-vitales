@@ -16,6 +16,7 @@ python-dotenv>=1.1.0        # Lectura de archivos .env
 # ── Base de Datos (MongoDB async) ─────────────────────────────────────────────
 motor>=3.7.0                # Driver async oficial de MongoDB (sobre PyMongo)
 pymongo>=4.12.0             # Driver base requerido por Motor
+dnspython>=2.6.1            # Requerido para conectar a MongoDB Atlas (mongodb+srv://)
 
 # ── Broker / Caché (Redis + Celery) ──────────────────────────────────────────
 celery>=5.5.2               # Framework de tareas distribuidas en background

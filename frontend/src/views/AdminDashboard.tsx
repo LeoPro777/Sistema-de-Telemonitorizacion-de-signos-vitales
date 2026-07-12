@@ -35,75 +35,75 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ kpis }) => {
     <div className="space-y-8 animate-in fade-in duration-300">
       
       {/* 1. Zona Superior: Tarjetas de KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         
         {/* Clientes Activos */}
-        <div className="bg-[#1E2640] p-6 rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/35 transition-all flex flex-col justify-between h-40 group shadow-lg">
+        <div className="bg-[#1E2640] p-4 md:p-6 rounded-2xl md:rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/35 transition-all flex flex-col justify-between h-32 md:h-40 group shadow-lg">
           <div className="flex justify-between items-start">
-            <div className="h-12 w-12 bg-[#0B0F19] rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-500/25 group-hover:scale-110 transition-transform">
-              <Users className="h-5 w-5" />
+            <div className="h-9 w-9 md:h-12 md:w-12 bg-[#0B0F19] rounded-xl md:rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-500/25 group-hover:scale-110 transition-transform">
+              <Users className="h-4 w-4 md:h-5 md:w-5" />
             </div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">CLIENTES</span>
+            <span className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">CLIENTES</span>
           </div>
-          <div className="my-2">
-            <span className="text-4xl font-extrabold tracking-tight text-white block">
+          <div className="my-1 md:my-2">
+            <span className="text-2xl md:text-4xl font-extrabold tracking-tight text-white block">
               {kpis.active_clients || 0}
             </span>
-            <span className="text-xs font-semibold text-slate-300 block mt-0.5">
+            <span className="text-[10px] md:text-xs font-semibold text-slate-300 block mt-0.5">
               Clientes Activos
             </span>
           </div>
         </div>
 
         {/* Pacientes Activos */}
-        <div className="bg-[#1E2640] p-6 rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/35 transition-all flex flex-col justify-between h-40 group shadow-lg">
+        <div className="bg-[#1E2640] p-4 md:p-6 rounded-2xl md:rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/35 transition-all flex flex-col justify-between h-32 md:h-40 group shadow-lg">
           <div className="flex justify-between items-start">
-            <div className="h-12 w-12 bg-[#0B0F19] rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-              <Activity className="h-5 w-5 animate-pulse" />
+            <div className="h-9 w-9 md:h-12 md:w-12 bg-[#0B0F19] rounded-xl md:rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+              <Activity className="h-4 w-4 md:h-5 md:w-5 animate-pulse" />
             </div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">PACIENTES</span>
+            <span className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">PACIENTES</span>
           </div>
-          <div className="my-2">
-            <span className="text-4xl font-extrabold tracking-tight text-white block">
+          <div className="my-1 md:my-2">
+            <span className="text-2xl md:text-4xl font-extrabold tracking-tight text-white block">
               {kpis.active_patients || 0}
             </span>
-            <span className="text-xs font-semibold text-slate-300 block mt-0.5">
+            <span className="text-[10px] md:text-xs font-semibold text-slate-300 block mt-0.5">
               Pacientes Activos
             </span>
           </div>
         </div>
 
         {/* Doctores Activos */}
-        <div className="bg-[#1E2640] p-6 rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/35 transition-all flex flex-col justify-between h-40 group shadow-lg">
+        <div className="bg-[#1E2640] p-4 md:p-6 rounded-2xl md:rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/35 transition-all flex flex-col justify-between h-32 md:h-40 group shadow-lg">
           <div className="flex justify-between items-start">
-            <div className="h-12 w-12 bg-[#0B0F19] rounded-2xl flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20 group-hover:scale-110 transition-transform">
-              <UserCheck className="h-5 w-5" />
+            <div className="h-9 w-9 md:h-12 md:w-12 bg-[#0B0F19] rounded-xl md:rounded-2xl flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20 group-hover:scale-110 transition-transform">
+              <UserCheck className="h-4 w-4 md:h-5 md:w-5" />
             </div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">DOCTORES</span>
+            <span className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">DOCTORES</span>
           </div>
-          <div className="my-2">
-            <span className="text-4xl font-extrabold tracking-tight text-white block">
+          <div className="my-1 md:my-2">
+            <span className="text-2xl md:text-4xl font-extrabold tracking-tight text-white block">
               {kpis.active_doctors || 0}
             </span>
-            <span className="text-xs font-semibold text-slate-300 block mt-0.5">
+            <span className="text-[10px] md:text-xs font-semibold text-slate-300 block mt-0.5">
               Doctores Activos
             </span>
           </div>
         </div>
 
         {/* Dispositivos Activos */}
-        <div className="bg-[#1E2640] p-6 rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/35 transition-all flex flex-col justify-between h-40 group shadow-lg">
+        <div className="bg-[#1E2640] p-4 md:p-6 rounded-2xl md:rounded-3xl border border-[#1E2640] hover:border-[#D4AF37]/35 transition-all flex flex-col justify-between h-32 md:h-40 group shadow-lg">
           <div className="flex justify-between items-start">
-            <div className="h-12 w-12 bg-[#0B0F19] rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/25 group-hover:scale-110 transition-transform">
-              <Smartphone className="h-5 w-5" />
+            <div className="h-9 w-9 md:h-12 md:w-12 bg-[#0B0F19] rounded-xl md:rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/25 group-hover:scale-110 transition-transform">
+              <Smartphone className="h-4 w-4 md:h-5 md:w-5" />
             </div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">DISPOSITIVOS</span>
+            <span className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">DISPOSITIVOS</span>
           </div>
-          <div className="my-2">
-            <span className="text-4xl font-extrabold tracking-tight text-white block">
+          <div className="my-1 md:my-2">
+            <span className="text-2xl md:text-4xl font-extrabold tracking-tight text-white block">
               {kpis.active_devices || 0}
             </span>
-            <span className="text-xs font-semibold text-slate-300 block mt-0.5">
+            <span className="text-[10px] md:text-xs font-semibold text-slate-300 block mt-0.5">
               Dispositivos Activos
             </span>
           </div>
