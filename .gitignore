@@ -1,0 +1,54 @@
+# =============================================================================
+# .gitignore — Raíz del Repositorio
+# Sistema de Telemonitorización de Signos Vitales
+# =============================================================================
+
+# ── Entornos y Configuración Sensible ─────────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+.env.test
+.env.*
+!.env.example
+
+# ── Python (Backend) ──────────────────────────────────────────────────────────
+backend/venv/
+backend/__pycache__/
+backend/*.py[cod]
+backend/*.pyo
+backend/*.pyd
+backend/.Python
+backend/*.egg-info/
+backend/dist/
+backend/build/
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+venv/
+*.py[cod]
+__pycache__/
+
+# ── Node / React (Frontend) ───────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+node_modules/
+dist/
+
+# ── Logs y Bases de Datos Temporales ───────────────────────────────────────────
+*.log
+backend_requests.log
+backend/backend_requests.log
+.pytest_cache/
+.pytest_cache
+
+# ── IDEs y Editores ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

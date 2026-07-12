@@ -1,0 +1,40 @@
+# =============================================================================
+# .dockerignore — Raíz del Repositorio
+# Sistema de Telemonitorización de Signos Vitales
+# =============================================================================
+
+# ── Dependencias Locales (Evita sobrescribir instalaciones de contenedor) ─────
+node_modules/
+**/node_modules/
+venv/
+**/venv/
+
+# ── Directorios de Compilación y Salidas ──────────────────────────────────────
+dist/
+**/dist/
+build/
+**/build/
+
+# ── Configuración Sensible y Git ──────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+.git/
+.gitignore
+.dockerignore
+.agents/
+
+# ── Cachés de Pruebas y Python ────────────────────────────────────────────────
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Logs y Temporales ─────────────────────────────────────────────────────────
+*.log
+backend_requests.log
+backend/backend_requests.log
+tmp/
+temp/

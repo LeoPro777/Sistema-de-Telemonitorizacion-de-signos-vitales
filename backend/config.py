@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
 
     class Config:
-        env_file = ".env"
+        env_file = (".env", "../.env")
+        extra = "ignore"
 
 
 settings = Settings()

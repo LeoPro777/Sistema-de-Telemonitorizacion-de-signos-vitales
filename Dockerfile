@@ -9,6 +9,8 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
+ARG GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 RUN npm run build
 
 # --- Stage 2: Imagen Final del Sistema ---
