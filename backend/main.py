@@ -26,6 +26,12 @@ from backend.routes.users import router as users_router
 from backend.services.audit import AuditContextMiddleware
 
 
+import os
+import httpx
+import logging
+
+logger = logging.getLogger("app.main")
+
 async def offline_checker_task():
     while True:
         try:
@@ -46,6 +52,29 @@ async def offline_checker_task():
             pass
         await asyncio.sleep(5)
 
+async def self_ping_task_loop():
+    """
+    Tarea en segundo plano para realizar pings periódicos a la URL pública del servicio.
+    Evita la hibernación (spin down) en las instancias gratuitas de Render.
+    """
+    await asyncio.sleep(10) # Esperar a que el servidor termine de iniciar
+    self_url = os.environ.get("RENDER_EXTERNAL_URL")
+    if not self_url:
+        logger.info("[Keep-Alive] RENDER_EXTERNAL_URL no configurado. Omitiendo keep-alive en desarrollo local.")
+        return
+
+    ping_url = f"{self_url.rstrip('/')}/health"
+    logger.info(f"[Keep-Alive] Iniciando pings periódicos a: {ping_url}")
+
+    async with httpx.AsyncClient(verify=False) as client:
+        while True:
+            try:
+                response = await client.get(ping_url, timeout=10.0)
+                logger.info(f"[Keep-Alive] Autollamado exitoso a {ping_url}. Status: {response.status_code}")
+            except Exception as e:
+                logger.warning(f"[Keep-Alive] Error al realizar autollamado a {ping_url}: {e}")
+            await asyncio.sleep(40)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Conectar base de datos y redis al arrancar
@@ -54,9 +83,13 @@ async def lifespan(app: FastAPI):
     # Iniciar la tarea en segundo plano para verificar desconexiones
     checker_task = asyncio.create_task(offline_checker_task())
     
+    # Iniciar la tarea de autollamada keep-alive para Render
+    ping_task = asyncio.create_task(self_ping_task_loop())
+    
     yield
     # Desconectar al apagar
     checker_task.cancel()
+    ping_task.cancel()
     await db_service.disconnect()
 
 app = FastAPI(
