@@ -128,9 +128,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ kpis }) => {
             <div className="mb-6">
               <span className="text-[10px] text-[#FF1744] tracking-[0.2em] font-bold uppercase block mb-1">MONITOREO DE ALERTA</span>
               <h3 className="text-lg font-bold text-white">Consola de Pacientes Críticos</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Visualización rápida de los signos vitales de los pacientes activos en situación de riesgo.
-              </p>
             </div>
 
             <div className="space-y-3 overflow-y-auto max-h-[30rem] pr-2 custom-scrollbar">
@@ -224,9 +221,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ kpis }) => {
                     <Smartphone className="h-5 w-5 text-[#D4AF37] animate-pulse" />
                   </div>
                   <h3 className="text-base font-bold text-white mt-2">Dispositivo del Paciente</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Diagnóstico técnico del hardware asignado a <strong className="text-slate-300">{selectedPatient.first_name} {selectedPatient.last_name}</strong>.
-                  </p>
                 </div>
 
                 {selectedPatient.device_info ? (

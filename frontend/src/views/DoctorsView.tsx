@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   Search, Grid, List as ListIcon, ShieldAlert, Award, ChevronRight
 
 } from 'lucide-react';
@@ -72,15 +72,11 @@ export const DoctorsView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
+
       {/* Cabecera superior y alternador de vista */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            MÓDULO 6: GESTIÓN DE DOCTORES (STAFF CLÍNICO)
-          </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Consola de Médicos</h2>
-          <p className="text-xs text-slate-400 mt-1">Supervisión, edición y auditoría del personal médico autorizado en AURA.</p>
         </div>
 
         {/* Botón Alternador */}
@@ -104,7 +100,7 @@ export const DoctorsView: React.FC = () => {
 
       {/* Barra de Filtros */}
       <div className="bg-glass p-5 rounded-3xl border border-[#1E2640] flex flex-col md:flex-row gap-4 items-center justify-between">
-        
+
         {/* Buscador Semántico */}
         <div className="relative w-full md:w-96">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -153,33 +149,31 @@ export const DoctorsView: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {doctors.map((doctor) => {
                 const isActive = doctor.is_active;
-                
+
                 return (
                   <button
                     key={doctor._id}
                     onClick={() => navigate(`/doctors/${doctor._id}`)}
-                    className={`bg-glass p-6 rounded-3xl border text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden ${
-                      !isActive 
+                    className={`bg-glass p-6 rounded-3xl border text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden ${!isActive
                         ? 'border-[#1E2640]/40 opacity-50 bg-black/10' // 50% opacity deactivation requirement!
                         : 'border-[#1E2640] hover:border-[#D4AF37]/30 shadow-sm'
-                    }`}
+                      }`}
                   >
-                    
+
                     <div>
                       {/* Cabecera Tarjeta: LED indicador */}
                       <div className="flex justify-between items-start">
                         {/* Indicador LED de disponibilidad */}
                         <div className="flex items-center space-x-1.5 bg-black/35 px-2 py-0.5 rounded-md border border-[#1E2640]">
-                          <span className={`h-2 w-2 rounded-full inline-block ${
-                            isActive 
-                              ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' 
+                          <span className={`h-2 w-2 rounded-full inline-block ${isActive
+                              ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]'
                               : 'bg-[#FF1744] shadow-[0_0_6px_#ef4444]'
-                          }`} />
+                            }`} />
                           <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                             {isActive ? 'ACTIVO' : 'INACTIVO'}
                           </span>
                         </div>
-                        
+
                         <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-black/30 border border-[#1E2640] text-slate-500">
                           {doctor.internal_staff_id}
                         </span>
@@ -191,7 +185,7 @@ export const DoctorsView: React.FC = () => {
                           <Award className="h-3.5 w-3.5 text-[#D4AF37]" />
                           <span>{doctor.specialty}</span>
                         </span>
-                        
+
                         <h4 className="text-sm font-extrabold text-slate-200 group-hover:text-white transition-colors truncate">
                           Dr. {doctor.first_name} {doctor.last_name}
                         </h4>
@@ -238,13 +232,12 @@ export const DoctorsView: React.FC = () => {
                   <tbody className="divide-y divide-[#1E2640]/40 text-xs md:text-sm font-mono">
                     {doctors.map((doctor) => {
                       const isActive = doctor.is_active;
-                      
+
                       return (
-                        <tr 
-                          key={doctor._id} 
-                          className={`hover:bg-[#1E2640]/20 transition-all ${
-                            !isActive ? 'opacity-50 bg-black/10' : ''
-                          }`}
+                        <tr
+                          key={doctor._id}
+                          className={`hover:bg-[#1E2640]/20 transition-all ${!isActive ? 'opacity-50 bg-black/10' : ''
+                            }`}
                         >
                           {/* Col 1: Nombre */}
                           <td className="py-4 px-6">
@@ -276,11 +269,10 @@ export const DoctorsView: React.FC = () => {
                           {/* Col 6: Availability LED */}
                           <td className="py-4 px-6 text-center">
                             <div className="flex items-center justify-center space-x-1.5">
-                              <span className={`h-2.5 w-2.5 rounded-full inline-block ${
-                                isActive 
-                                  ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' 
+                              <span className={`h-2.5 w-2.5 rounded-full inline-block ${isActive
+                                  ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]'
                                   : 'bg-[#FF1744] shadow-[0_0_6px_#ef4444]'
-                              }`} />
+                                }`} />
                               <span className="text-[10px] text-slate-400 font-bold uppercase">
                                 {isActive ? 'Activo' : 'Inactivo'}
                               </span>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  User, Shield, Mail, Phone, MapPin, FileText, 
+import {
+  User, Shield, Mail, Phone, MapPin, FileText,
   Award, Edit3, Building, Heart
 } from 'lucide-react';
 import api from '../utils/api';
@@ -81,15 +81,11 @@ export const ProfileView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-mono max-w-4xl mx-auto">
-      
+
       {/* Cabecera superior */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            MÓDULO 10: CONFIGURACIÓN DE EXPEDIENTE PERSONAL
-          </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Mi Perfil</h2>
-          <p className="text-xs text-slate-400 mt-1">Supervise sus credenciales de seguridad, datos de contacto y rol de gobernanza en AURA.</p>
         </div>
 
         <button
@@ -103,16 +99,16 @@ export const ProfileView: React.FC = () => {
 
       {/* Banner Principal de Perfil (Glassmorphism con Avatar Grande) */}
       <div className="bg-glass rounded-3xl border border-[#1E2640] p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
-        
+
         {/* Glow de fondo de ambientación */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
 
         {/* Avatar Circular */}
         <div className="relative">
           <div className="h-24 w-24 md:h-28 md:w-28 rounded-full border-2 border-[#D4AF37]/45 p-1 bg-black/40 shadow-xl">
-            <img 
-              src={profile.google_avatar_url || "https://api.dicebear.com/7.x/adventurer/svg?seed=AuraUser"} 
-              alt="Avatar de Usuario" 
+            <img
+              src={profile.google_avatar_url || "https://api.dicebear.com/7.x/adventurer/svg?seed=AuraUser"}
+              alt="Avatar de Usuario"
               className="h-full w-full rounded-full object-cover bg-[#0B0F19]"
             />
           </div>
@@ -141,53 +137,53 @@ export const ProfileView: React.FC = () => {
 
       {/* Cajas de Información */}
       <div className="bg-glass rounded-3xl border border-[#1E2640] p-6 md:p-8">
-        
+
         {/* DATOS PERSONALES */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs md:text-sm">
-            
-            <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5">
-              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Nombres Completos</span>
-              <strong className="text-slate-200 block text-sm font-sans">{personal.first_name}</strong>
-            </div>
 
-            <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5">
-              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Apellidos Clínicos</span>
-              <strong className="text-slate-200 block text-sm font-sans">{personal.last_name}</strong>
-            </div>
-
-            <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between col-span-1 md:col-span-2">
-              <div className="space-y-1.5">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Correo Electrónico Validado</span>
-                <strong className="text-slate-200 block text-sm font-sans select-all">{personal.email}</strong>
-              </div>
-              <Mail className="h-5 w-5 text-slate-600 mr-2" />
-            </div>
-
-            <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between">
-              <div className="space-y-1.5">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Teléfono de Emergencias</span>
-                <strong className="text-slate-200 block text-sm font-sans select-all">{personal.phone}</strong>
-              </div>
-              <Phone className="h-5 w-5 text-slate-600 mr-2" />
-            </div>
-
-            <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between">
-              <div className="space-y-1.5">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Cédula / RIF / Identificación Fiscal</span>
-                <strong className="text-slate-200 block text-sm font-sans select-all">{personal.identification_number}</strong>
-              </div>
-              <FileText className="h-5 w-5 text-slate-600 mr-2" />
-            </div>
-
-            <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between col-span-1 md:col-span-2">
-              <div className="space-y-1.5">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Dirección Particular / Física</span>
-                <strong className="text-slate-200 block text-sm font-sans">{personal.address}</strong>
-              </div>
-              <MapPin className="h-5 w-5 text-slate-600 mr-2" />
-            </div>
-
+          <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5">
+            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Nombres Completos</span>
+            <strong className="text-slate-200 block text-sm font-sans">{personal.first_name}</strong>
           </div>
+
+          <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5">
+            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Apellidos Clínicos</span>
+            <strong className="text-slate-200 block text-sm font-sans">{personal.last_name}</strong>
+          </div>
+
+          <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between col-span-1 md:col-span-2">
+            <div className="space-y-1.5">
+              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Correo Electrónico Validado</span>
+              <strong className="text-slate-200 block text-sm font-sans select-all">{personal.email}</strong>
+            </div>
+            <Mail className="h-5 w-5 text-slate-600 mr-2" />
+          </div>
+
+          <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between">
+            <div className="space-y-1.5">
+              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Teléfono de Emergencias</span>
+              <strong className="text-slate-200 block text-sm font-sans select-all">{personal.phone}</strong>
+            </div>
+            <Phone className="h-5 w-5 text-slate-600 mr-2" />
+          </div>
+
+          <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between">
+            <div className="space-y-1.5">
+              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Cédula / RIF / Identificación Fiscal</span>
+              <strong className="text-slate-200 block text-sm font-sans select-all">{personal.identification_number}</strong>
+            </div>
+            <FileText className="h-5 w-5 text-slate-600 mr-2" />
+          </div>
+
+          <div className="p-4 bg-black/20 border border-[#1E2640] rounded-2xl space-y-1.5 flex items-center justify-between col-span-1 md:col-span-2">
+            <div className="space-y-1.5">
+              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Dirección Particular / Física</span>
+              <strong className="text-slate-200 block text-sm font-sans">{personal.address}</strong>
+            </div>
+            <MapPin className="h-5 w-5 text-slate-600 mr-2" />
+          </div>
+
+        </div>
 
       </div>
 

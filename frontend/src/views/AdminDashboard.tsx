@@ -115,11 +115,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ kpis }) => {
       <div className="bg-[#1E2640] p-6 rounded-3xl border border-[#1E2640] shadow-xl">
         <div className="mb-6 flex justify-between items-center">
           <div>
-            <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">AUDITORÍA Y ONBOARDING</span>
             <h3 className="text-lg font-bold text-white">Cola de Aspirantes</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Revisión de solicitudes registradas en el sistema pendientes de aprobación.
-            </p>
           </div>
           <span className="px-3 py-1 bg-[#D4AF37]/10 text-[#D4AF37] text-xs font-bold rounded-full border border-[#D4AF37]/20 font-mono">
             {applicants.length} Pendientes

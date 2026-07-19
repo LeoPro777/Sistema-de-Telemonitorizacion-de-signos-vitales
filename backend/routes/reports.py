@@ -47,6 +47,22 @@ def calculate_correlation(x: List[float], y: List[float]) -> float:
         return 0.0
     return round(cov / math.sqrt(var_x * var_y), 2)
 
+def get_granularity_seconds(granularity: Optional[str]) -> int:
+    mapping = {
+        "1min": 60,
+        "5min": 300,
+        "30min": 1800,
+        "1hr": 3600,
+        "3hrs": 10800,
+        "6hrs": 21600,
+        "12hrs": 43200,
+        "1day": 86400,
+        "3days": 259200,
+        "7days": 604800,
+        "15days": 1296000,
+    }
+    return mapping.get(str(granularity).lower(), 0)
+
 # Helper para permitir autenticación por token en query param (para descargas nativas del navegador)
 async def get_current_user_from_token_or_param(
     current_user: Optional[UserResponse] = Depends(get_current_user),
@@ -111,7 +127,7 @@ async def create_report(req: ReportCreate, current_user: UserResponse = Depends(
         if not patient:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paciente no encontrado.")
 
-        # Obtener histórico de telemetría de vital_signs_history
+        # Obtener histórico de telemetría real de vital_signs_history
         cursor = db_service.db.vital_signs_history.find({
             "patient_id": ObjectId(req.patient_id),
             "timestamp": {"$gte": start_dt, "$lte": end_dt}
@@ -121,57 +137,88 @@ async def create_report(req: ReportCreate, current_user: UserResponse = Depends(
         async for doc in cursor:
             history_list.append(doc)
 
-        # Si no hay lecturas, generar datos simulados basados en las constantes para evitar reporte vacío
-        bpm_vals = [h["telemetry"]["heart_rate"] for h in history_list]
-        spo2_vals = [h["telemetry"]["spo2"] for h in history_list]
-        temp_vals = [h["telemetry"]["temperature"] for h in history_list]
+        # Extraer únicamente lecturas existentes de telemetría (excluyendo días o periodos sin registros)
+        bpm_vals = [h["telemetry"]["heart_rate"] for h in history_list if h.get("telemetry", {}).get("heart_rate") is not None]
+        spo2_vals = [h["telemetry"]["spo2"] for h in history_list if h.get("telemetry", {}).get("spo2") is not None]
+        temp_vals = [h["telemetry"]["temperature"] for h in history_list if h.get("telemetry", {}).get("temperature") is not None]
 
-        if not history_list:
-            import random
-            bpm_vals = [70, 72, 75, 80, 88, 76, 73]
-            spo2_vals = [98, 97, 96, 95, 93, 97, 98]
-            temp_vals = [36.5, 36.6, 36.7, 36.9, 37.2, 36.6, 36.5]
-            
-            # Crear puntos para gráfico
+        if not history_list or len(bpm_vals) == 0:
+            # Los días sin datos no se cuentan ni afectan los promedios
             chart_points = []
-            base_time = start_dt
-            delta = (end_dt - start_dt) / 6
-            for i in range(7):
-                timestamp = base_time + delta * i
-                chart_points.append({
-                    "timestamp": timestamp.strftime("%d %b"),
-                    "bpm": bpm_vals[i],
-                    "spo2": spo2_vals[i],
-                    "temp": temp_vals[i]
-                })
+            avg_bpm = 0.0
+            avg_spo2 = 0.0
+            avg_temp = 0.0
+            volatility_bpm = 0.0
+            volatility_spo2 = 0.0
+            correlation_r = 0.0
+            correlation_desc = "Sin datos de telemetría en el rango seleccionado"
         else:
-            # Seleccionar una muestra de máximo 100 puntos espaciados para no saturar Recharts
-            step = max(1, len(history_list) // 100)
+            granularity_sec = get_granularity_seconds(req.interval_granularity)
             chart_points = []
-            for doc in history_list[::step]:
-                chart_points.append({
-                    "timestamp": doc["timestamp"].strftime("%d %b"),
-                    "bpm": doc["telemetry"]["heart_rate"],
-                    "spo2": doc["telemetry"]["spo2"],
-                    "temp": doc["telemetry"]["temperature"]
-                })
 
-        # Cálculos estadísticos
-        n = len(bpm_vals)
-        avg_bpm = round(sum(bpm_vals) / n, 1) if n > 0 else 72.0
-        avg_spo2 = round(sum(spo2_vals) / n, 1) if n > 0 else 96.0
-        avg_temp = round(sum(temp_vals) / n, 1) if n > 0 else 36.6
+            if granularity_sec > 0:
+                # Agrupar lecturas por buckets temporales según la granularidad requerida por el usuario
+                buckets: Dict[int, List[dict]] = {}
+                for doc in history_list:
+                    ts = doc["timestamp"]
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                    seconds_offset = (ts - start_dt).total_seconds()
+                    b_idx = int(max(0, seconds_offset) // granularity_sec)
+                    if b_idx not in buckets:
+                        buckets[b_idx] = []
+                    buckets[b_idx].append(doc)
 
-        volatility_bpm = calculate_std_dev(bpm_vals) if n > 1 else 3.2
-        volatility_spo2 = calculate_std_dev(spo2_vals) if n > 1 else 1.1
+                for b_idx in sorted(buckets.keys()):
+                    b_docs = buckets[b_idx]
+                    b_bpms = [d["telemetry"]["heart_rate"] for d in b_docs if d.get("telemetry", {}).get("heart_rate") is not None]
+                    b_spo2s = [d["telemetry"]["spo2"] for d in b_docs if d.get("telemetry", {}).get("spo2") is not None]
+                    b_temps = [d["telemetry"]["temperature"] for d in b_docs if d.get("telemetry", {}).get("temperature") is not None]
 
-        correlation_r = calculate_correlation(bpm_vals, spo2_vals) if n > 1 else -0.25
-        
-        correlation_desc = "Patrón Fisiológico Estable"
-        if correlation_r < -0.4:
-            correlation_desc = "Respuesta Fisiológica Crítica Cruzada Detectada (Hipoxia por Taquicardia)"
-        elif correlation_r > 0.4:
-            correlation_desc = "Correlación Positiva Directa (Estrés Generalizado)"
+                    if not b_bpms:
+                        continue
+
+                    first_ts = b_docs[0]["timestamp"]
+                    label_fmt = "%H:%M" if granularity_sec < 86400 else "%d %b"
+                    if granularity_sec >= 3600 and granularity_sec < 86400:
+                        label_fmt = "%d %b %H:%M"
+
+                    chart_points.append({
+                        "timestamp": first_ts.strftime(label_fmt),
+                        "bpm": round(sum(b_bpms) / len(b_bpms), 1),
+                        "spo2": round(sum(b_spo2s) / len(b_spo2s), 1),
+                        "temp": round(sum(b_temps) / len(b_temps), 1)
+                    })
+            else:
+                # Selección automática: muestra de máximo 100 puntos reales para visualización
+                step = max(1, len(history_list) // 100)
+                for doc in history_list[::step]:
+                    chart_points.append({
+                        "timestamp": doc["timestamp"].strftime("%d %b"),
+                        "bpm": doc["telemetry"]["heart_rate"],
+                        "spo2": doc["telemetry"]["spo2"],
+                        "temp": doc["telemetry"]["temperature"]
+                    })
+
+            # Cálculos estadísticos estrictos exclusivamente sobre días/momentos con registros activos
+            n_bpm = len(bpm_vals)
+            n_spo2 = len(spo2_vals)
+            n_temp = len(temp_vals)
+
+            avg_bpm = round(sum(bpm_vals) / n_bpm, 1) if n_bpm > 0 else 0.0
+            avg_spo2 = round(sum(spo2_vals) / n_spo2, 1) if n_spo2 > 0 else 0.0
+            avg_temp = round(sum(temp_vals) / n_temp, 1) if n_temp > 0 else 0.0
+
+            volatility_bpm = calculate_std_dev(bpm_vals) if n_bpm > 1 else 0.0
+            volatility_spo2 = calculate_std_dev(spo2_vals) if n_spo2 > 1 else 0.0
+
+            correlation_r = calculate_correlation(bpm_vals, spo2_vals) if (n_bpm > 1 and n_spo2 > 1) else 0.0
+            
+            correlation_desc = "Patrón Fisiológico Estable"
+            if correlation_r < -0.4:
+                correlation_desc = "Respuesta Fisiológica Crítica Cruzada Detectada (Hipoxia por Taquicardia)"
+            elif correlation_r > 0.4:
+                correlation_desc = "Correlación Positiva Directa (Estrés Generalizado)"
 
         # Alertas e incidentes asociados
         alerts_count = await db_service.db.alerts.count_documents({
@@ -540,7 +587,7 @@ async def export_report(
         # Generar firma digital inmutable
         sha_hash = hashlib.sha256(f"report_{id}_{current_user.email}".encode()).hexdigest()
         audit_data = [
-            [Paragraph("Firma Digital del Servidor (SHA-256):", body_bold), Paragraph(f"Director Médico: Dr. Pedro Ramírez L.", body_bold)],
+            [Paragraph("Firma Digital del Servidor (SHA-256):", body_bold), Paragraph("Verificación de Integridad", body_bold)],
             [Paragraph(sha_hash, ParagraphStyle(name='Hash', parent=styles['Normal'], fontName='Courier', fontSize=6.5)), Paragraph("Firma electrónica inmutable en el motor NoSQL", styles['Normal'])]
         ]
         audit_table = Table(audit_data, colWidths=[270, 270])

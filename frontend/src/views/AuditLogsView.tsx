@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, Cpu, Terminal, 
+import {
+  Search, Cpu, Terminal,
   Download, X, HelpCircle, Loader
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,13 +11,13 @@ export const AuditLogsView: React.FC = () => {
   const [criticalityFilter, setCriticalityFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
-  
+
   // Estados para logs reales del backend
   const [logs, setLogs] = useState<any[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  
+
   // Detalle de log en modal
   const [selectedLog, setSelectedLog] = useState<any | null>(null);
 
@@ -91,7 +91,7 @@ export const AuditLogsView: React.FC = () => {
       token: token || ''
     });
     const exportUrl = `${API_BASE_URL}/audit-logs/export/${format}?${queryParams.toString()}`;
-    
+
     toast.loading(`Generando exportación de logs (${format.toUpperCase()})...`, { duration: 1500 });
     setTimeout(() => {
       window.open(exportUrl, '_blank');
@@ -130,8 +130,8 @@ export const AuditLogsView: React.FC = () => {
 
           let lineClass = "text-slate-400";
           if (isChanged) {
-            lineClass = type === 'prev' 
-              ? "bg-rose-500/10 text-rose-400 font-bold border-l-2 border-rose-500 pl-1.5" 
+            lineClass = type === 'prev'
+              ? "bg-rose-500/10 text-rose-400 font-bold border-l-2 border-rose-500 pl-1.5"
               : "bg-emerald-500/10 text-emerald-400 font-bold border-l-2 border-emerald-500 pl-1.5";
           } else if (isAdded) {
             lineClass = "bg-emerald-500/10 text-emerald-400 font-bold border-l-2 border-emerald-500 pl-1.5";
@@ -160,15 +160,11 @@ export const AuditLogsView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-mono relative">
-      
+
       {/* Cabecera superior */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            MÓDULO 12: AUDITORÍA FORENSE Y SEGURIDAD INMUTABLE
-          </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Consola de Auditoría</h2>
-          <p className="text-xs text-slate-400 mt-1">Supervisión de cambios del sistema, ping de hardware e inyección de directivas clínicas.</p>
         </div>
 
         {/* selectores y descarga */}
@@ -176,23 +172,21 @@ export const AuditLogsView: React.FC = () => {
           <div className="flex items-center space-x-2 bg-[#0F1420] border border-[#1E2640] p-1 rounded-xl">
             <button
               onClick={() => { setActiveTab('GLOBAL_ACTIVITY'); }}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
-                activeTab === 'GLOBAL_ACTIVITY'
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${activeTab === 'GLOBAL_ACTIVITY'
                   ? 'bg-[#D4AF37] text-black shadow-md shadow-[#D4AF37]/10'
                   : 'text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               <Terminal className="h-3.5 w-3.5" />
               <span>Actividad Global</span>
             </button>
-            
+
             <button
               onClick={() => { setActiveTab('IOT_TELEMETRY'); }}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
-                activeTab === 'IOT_TELEMETRY'
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${activeTab === 'IOT_TELEMETRY'
                   ? 'bg-[#D4AF37] text-black shadow-md'
                   : 'text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               <Cpu className="h-3.5 w-3.5" />
               <span>Conectividad IoT</span>
@@ -221,7 +215,7 @@ export const AuditLogsView: React.FC = () => {
 
       {/* Barra de Filtros */}
       <div className="bg-glass p-5 rounded-3xl border border-[#1E2640] flex flex-col md:flex-row gap-4 items-center justify-between">
-        
+
         {/* Buscador */}
         <div className="relative w-full md:w-96">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -268,7 +262,7 @@ export const AuditLogsView: React.FC = () => {
                   <th className="py-4 px-6">Timestamp (UTC)</th>
                   <th className="py-4 px-6 text-center">Nivel</th>
                   <th className="py-4 px-6">Acción Evento</th>
-                  
+
                   {activeTab === 'GLOBAL_ACTIVITY' ? (
                     <>
                       <th className="py-4 px-6">Actor / Usuario</th>
@@ -291,19 +285,19 @@ export const AuditLogsView: React.FC = () => {
                     <td className="py-4 px-6 text-slate-400 whitespace-nowrap">
                       {new Date(log.timestamp).toISOString().replace('T', ' ').substring(0, 19)}
                     </td>
-                    
+
                     {/* Col 2: Nivel */}
                     <td className="py-4 px-6 text-center">
                       <span className={`px-2 py-0.5 rounded border text-[9px] font-extrabold tracking-wider ${getCriticalityColor(log.criticality)}`}>
                         {log.criticality}
                       </span>
                     </td>
- 
+
                     {/* Col 3: Acción */}
                     <td className="py-4 px-6 font-bold text-slate-200">
                       {log.event_action}
                     </td>
- 
+
                     {activeTab === 'GLOBAL_ACTIVITY' ? (
                       <>
                         {/* Col 4: Actor */}
@@ -332,7 +326,7 @@ export const AuditLogsView: React.FC = () => {
                         </td>
                       </>
                     )}
- 
+
                     {/* Col 7: Acciones */}
                     <td className="py-4 px-6 text-right">
                       {activeTab === 'GLOBAL_ACTIVITY' ? (
@@ -381,14 +375,14 @@ export const AuditLogsView: React.FC = () => {
       {selectedLog && (
         <div className="fixed inset-0 bg-[#0B0F19]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-[#080C14] border border-[#1E2640] rounded-3xl p-6 w-full max-w-4xl text-xs flex flex-col justify-between h-[85vh] shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-            
+
             <button
               onClick={() => setSelectedLog(null)}
               className="absolute right-4 top-4 p-1.5 bg-[#1E2640] text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
             >
               <X className="h-4 w-4" />
             </button>
- 
+
             {/* Header del Modal */}
             <div className="border-b border-[#1E2640]/60 pb-3 mb-5">
               <div className="flex items-center space-x-2 text-[9px] text-[#D4AF37] font-bold uppercase tracking-wider">
@@ -399,10 +393,10 @@ export const AuditLogsView: React.FC = () => {
                 {selectedLog.event_action} — ID: {selectedLog._id}
               </strong>
             </div>
- 
+
             {/* Diff Columns */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto bg-black/45 border border-[#1E2640]/55 p-4 md:p-6 rounded-2xl">
-              
+
               {/* Columna Izquierda: Estado Anterior */}
               <div className="space-y-3 flex flex-col h-full">
                 <span className="text-[9px] text-rose-400 font-bold uppercase tracking-wider block border-b border-rose-500/10 pb-1">
@@ -410,7 +404,7 @@ export const AuditLogsView: React.FC = () => {
                 </span>
                 {renderFormattedDiff(selectedLog.previous_values, selectedLog.new_values, 'prev')}
               </div>
- 
+
               {/* Columna Derecha: Estado Nuevo */}
               <div className="space-y-3 flex flex-col h-full">
                 <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider block border-b border-emerald-500/10 pb-1">
@@ -418,9 +412,9 @@ export const AuditLogsView: React.FC = () => {
                 </span>
                 {renderFormattedDiff(selectedLog.previous_values, selectedLog.new_values, 'new')}
               </div>
- 
+
             </div>
- 
+
             {/* Footer Modal */}
             <div className="flex items-center space-x-3 mt-6 pt-4 border-t border-[#1E2640]/50">
               <button
@@ -430,7 +424,7 @@ export const AuditLogsView: React.FC = () => {
                 <Download className="h-4 w-4" />
                 <span>Descargar Log Completo</span>
               </button>
-              
+
               <button
                 onClick={() => setSelectedLog(null)}
                 className="px-6 py-3 bg-black/35 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-[#1E2640] font-extrabold text-xs rounded-xl transition-all uppercase tracking-wider text-center"
@@ -438,11 +432,11 @@ export const AuditLogsView: React.FC = () => {
                 Cerrar
               </button>
             </div>
- 
+
           </div>
         </div>
       )}
- 
+
     </div>
   );
 };

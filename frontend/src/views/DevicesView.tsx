@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, Plus, Battery, Wifi, Cpu, AlertTriangle, 
+import {
+  Search, Plus, Battery, Wifi, Cpu, AlertTriangle,
   CheckCircle, Settings, ShieldAlert, WifiOff
 } from 'lucide-react';
 import api from '../utils/api';
@@ -10,7 +10,7 @@ import { useTour } from '../hooks/useTour';
 
 export const DevicesView: React.FC = () => {
   const navigate = useNavigate();
-  
+
   // Configuración del Product Tour
   const tourSteps = [
     {
@@ -48,7 +48,7 @@ export const DevicesView: React.FC = () => {
   ];
 
   useTour('devices_tour', tourSteps);
-  
+
   // Estados de datos
   const [devices, setDevices] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -130,15 +130,11 @@ export const DevicesView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
+
       {/* Cabecera de Página */}
       <div id="devices-header" className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            MÓDULO 5: INVENTARIO TÉCNICO IOT
-          </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Consola de Dispositivos</h2>
-          <p className="text-xs text-slate-400 mt-1">Supervisión técnica de microcontroladores ESP32 y provisión biométrica.</p>
         </div>
 
         {/* Botón Provisión de Hardware */}
@@ -154,7 +150,7 @@ export const DevicesView: React.FC = () => {
 
       {/* Barra de Filtros Avanzada */}
       <div className="bg-glass p-5 rounded-3xl border border-[#1E2640] flex flex-col lg:flex-row gap-4 items-center justify-between">
-        
+
         {/* Buscador */}
         <div className="relative w-full lg:w-96">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -172,7 +168,7 @@ export const DevicesView: React.FC = () => {
 
         {/* selectores de Filtro */}
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          
+
           {/* Filtro Estado Operacional */}
           <select
             value={operationalStatus}
@@ -218,19 +214,17 @@ export const DevicesView: React.FC = () => {
             {devices.map((device) => {
               const metrics = device.hardware_metrics || { battery_percent: 100, signal_strength_dbm: -50 };
               const isPending = device.approval_status === 'PENDING_APPROVAL';
-              
+
               return (
                 <div
                   key={device._id}
-                  className={`bg-glass rounded-3xl border p-6 flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden font-mono ${
-                    !device.is_active ? 'grayscale opacity-60' : ''
-                  } ${
-                    device.has_hardware_alert 
-                      ? 'border-[#FFD700] bg-[#FFD700]/5 shadow-[0_0_15px_rgba(255,215,0,0.06)] animate-pulse' 
+                  className={`bg-glass rounded-3xl border p-6 flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden font-mono ${!device.is_active ? 'grayscale opacity-60' : ''
+                    } ${device.has_hardware_alert
+                      ? 'border-[#FFD700] bg-[#FFD700]/5 shadow-[0_0_15px_rgba(255,215,0,0.06)] animate-pulse'
                       : 'border-[#1E2640] hover:border-[#D4AF37]/30'
-                  }`}
+                    }`}
                 >
-                  
+
                   {/* Decorative hardware pattern overlay */}
                   <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none select-none">
                     <Cpu className="h-24 w-24" />
@@ -240,11 +234,10 @@ export const DevicesView: React.FC = () => {
                     {/* Tarjeta Cabecera */}
                     <div className="flex justify-between items-start">
                       <div className="flex items-center space-x-2">
-                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center border ${
-                          device.has_hardware_alert
+                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center border ${device.has_hardware_alert
                             ? 'bg-[#FFD700]/25 border-[#FFD700] text-[#FFD700]'
                             : 'bg-[#1E2640] border-[#1E2640] text-slate-400'
-                        }`}>
+                          }`}>
                           <Cpu className="h-4.5 w-4.5" />
                         </div>
                         <div>
@@ -290,7 +283,7 @@ export const DevicesView: React.FC = () => {
 
                     {/* Hardware Metrics section (Battery and Signal) */}
                     <div className="my-5 border-t border-[#1E2640]/55 pt-4 space-y-3.5">
-                      
+
                       {/* Batería */}
                       <div className="space-y-1.5">
                         <div className="flex justify-between items-center text-[10px]">
@@ -301,7 +294,7 @@ export const DevicesView: React.FC = () => {
                           <strong className="text-slate-300">{metrics.battery_percent}%</strong>
                         </div>
                         <div className="w-full bg-black/40 h-2 border border-[#1E2640]/40 rounded overflow-hidden p-[1px]">
-                          <div 
+                          <div
                             className={`h-full rounded-sm transition-all duration-500 ${getBatteryColor(metrics.battery_percent)}`}
                             style={{ width: `${metrics.battery_percent}%` }}
                           />
@@ -322,7 +315,7 @@ export const DevicesView: React.FC = () => {
 
                   {/* Footer de Tarjeta con estatus operacional e indicador de alertas */}
                   <div className="flex justify-between items-center border-t border-[#1E2640]/55 pt-4 mt-1">
-                    
+
                     {/* Badge operacional */}
                     <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${getOperationalStatusColor(device.operational_status)}`}>
                       {device.operational_status}

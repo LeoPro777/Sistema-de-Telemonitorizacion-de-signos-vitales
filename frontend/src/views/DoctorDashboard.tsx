@@ -224,9 +224,6 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ kpis }) => {
                     <Smartphone className="h-5 w-5 text-[#D4AF37] animate-pulse" />
                   </div>
                   <h3 className="text-base font-bold text-white mt-2">Dispositivo del Paciente</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Diagnóstico técnico del hardware asignado a <strong className="text-slate-300">{selectedPatient.first_name} {selectedPatient.last_name}</strong>.
-                  </p>
                 </div>
 
                 {selectedPatient.device_info ? (

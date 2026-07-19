@@ -168,7 +168,6 @@ export const RegistrationStepperView: React.FC = () => {
             <div className="space-y-6">
               <div className="mb-4">
                 <h3 className="text-xl font-bold tracking-tight">Datos Personales y de Cuenta</h3>
-                <p className="text-xs text-slate-400 mt-1">Ingrese sus datos de identidad y credenciales para la cuenta.</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -238,7 +237,6 @@ export const RegistrationStepperView: React.FC = () => {
             <div className="space-y-6">
               <div className="mb-4">
                 <h3 className="text-xl font-bold tracking-tight">Información de Perfil</h3>
-                <p className="text-xs text-slate-400 mt-1">Proporcione detalles específicos del rol solicitado.</p>
               </div>
 
               {/* DYNAMIC FIELDS FOR DOCTOR */}

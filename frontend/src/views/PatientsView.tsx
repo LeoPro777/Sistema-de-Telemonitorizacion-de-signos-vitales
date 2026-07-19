@@ -225,11 +225,7 @@ export const PatientsView: React.FC = () => {
       {/* Cabecera superior y barra de herramientas */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            MÓDULO DE GESTIÓN MÉDICA
-          </span>
           <h2 id="patients-header" className="text-2xl md:text-3xl font-extrabold tracking-tight">Consola de Pacientes</h2>
-          <p className="text-xs text-slate-400 mt-1">Supervisión e inspección de expedientes vitales en red.</p>
         </div>
 
         {/* Alternador de Vista (Grid / Tabla) */}

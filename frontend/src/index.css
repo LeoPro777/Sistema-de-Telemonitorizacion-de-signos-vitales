@@ -2,10 +2,157 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Default: aura_gold dark */
+  --bg-main: #0B0F19;
+  --bg-card: rgba(30, 38, 64, 0.7);
+  --bg-card-solid: #1E2640;
+  --border-color: #1E2640;
+  --border-glow: rgba(212, 175, 55, 0.1);
+  --accent-color: #D4AF37;
+  --accent-glow: rgba(212, 175, 55, 0.25);
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+}
+
+/* ==========================================================================
+   5 SIGNATURE THEMES & LIGHT/DARK VARIABLES
+   ========================================================================== */
+
+/* 1. AURA Gold (Default fallback) */
+:root,
+[data-theme="aura_gold"][data-mode="dark"],
+[data-theme="premium_dark"][data-mode="dark"] {
+  --bg-main: #0B0F19;
+  --bg-card-solid: #1E2640;
+  --border-color: #1E2640;
+  --accent-color: #D4AF37;
+  --accent-glow: rgba(212, 175, 55, 0.25);
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+}
+
+[data-mode="light"],
+[data-theme="aura_gold"][data-mode="light"],
+[data-theme="premium_dark"][data-mode="light"] {
+  --bg-main: #F8FAFC;
+  --bg-card-solid: #FFFFFF;
+  --border-color: #E2E8F0;
+  --accent-color: #B48A16;
+  --accent-glow: rgba(180, 138, 22, 0.15);
+  --text-main: #0F172A;
+  --text-muted: #475569;
+}
+
+/* 2. Emerald Clinical */
+[data-theme="emerald"][data-mode="dark"] {
+  --bg-main: #061412;
+  --bg-card-solid: #0F2923;
+  --border-color: #164E41;
+  --accent-color: #10B981;
+  --accent-glow: rgba(16, 185, 129, 0.25);
+  --text-main: #F0FDF4;
+  --text-muted: #A7F3D0;
+}
+[data-theme="emerald"][data-mode="light"] {
+  --bg-main: #F0FDF4;
+  --bg-card-solid: #FFFFFF;
+  --border-color: #DCFCE7;
+  --accent-color: #059669;
+  --accent-glow: rgba(5, 150, 105, 0.15);
+  --text-main: #064E3B;
+  --text-muted: #047857;
+}
+
+/* 3. Cyber Cobalt */
+[data-theme="cyber_cobalt"][data-mode="dark"] {
+  --bg-main: #0B132B;
+  --bg-card-solid: #1C2541;
+  --border-color: #2A365C;
+  --accent-color: #00F0FF;
+  --accent-glow: rgba(0, 240, 255, 0.25);
+  --text-main: #F0F9FF;
+  --text-muted: #7DD3FC;
+}
+[data-theme="cyber_cobalt"][data-mode="light"] {
+  --bg-main: #F0F9FF;
+  --bg-card-solid: #FFFFFF;
+  --border-color: #E0F2FE;
+  --accent-color: #0284C7;
+  --accent-glow: rgba(2, 132, 199, 0.15);
+  --text-main: #0C4A6E;
+  --text-muted: #0369A1;
+}
+
+/* 4. Amethyst Dusk */
+[data-theme="amethyst"][data-mode="dark"] {
+  --bg-main: #0F0A1C;
+  --bg-card-solid: #1E1633;
+  --border-color: #312352;
+  --accent-color: #A855F7;
+  --accent-glow: rgba(168, 85, 247, 0.25);
+  --text-main: #FAF5FF;
+  --text-muted: #C084FC;
+}
+[data-theme="amethyst"][data-mode="light"] {
+  --bg-main: #FAF5FF;
+  --bg-card-solid: #FFFFFF;
+  --border-color: #F3E8FF;
+  --accent-color: #7E22CE;
+  --accent-glow: rgba(126, 34, 206, 0.15);
+  --text-main: #4C1D95;
+  --text-muted: #6B21A8;
+}
+
+/* 5. Crimson Vital */
+[data-theme="crimson"][data-mode="dark"] {
+  --bg-main: #12080A;
+  --bg-card-solid: #261217;
+  --border-color: #421D26;
+  --accent-color: #F43F5E;
+  --accent-glow: rgba(244, 63, 94, 0.25);
+  --text-main: #FFF1F2;
+  --text-muted: #FDA4AF;
+}
+[data-theme="crimson"][data-mode="light"] {
+  --bg-main: #FFF1F2;
+  --bg-card-solid: #FFFFFF;
+  --border-color: #FFE4E6;
+  --accent-color: #E11D48;
+  --accent-glow: rgba(225, 29, 72, 0.15);
+  --text-main: #881337;
+  --text-muted: #9F1239;
+}
+
 @layer base {
   body {
-    @apply bg-[#0B0F19] text-slate-100 antialiased selection:bg-[#D4AF37] selection:text-black;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    @apply antialiased transition-colors duration-200;
     font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Dynamic theme classes for standard dark containers */
+  .bg-\[\#0B0F19\] {
+    background-color: var(--bg-main) !important;
+  }
+  .bg-\[\#1E2640\] {
+    background-color: var(--bg-card-solid) !important;
+  }
+  .border-\[\#1E2640\] {
+    border-color: var(--border-color) !important;
+  }
+  .text-\[\#D4AF37\] {
+    color: var(--accent-color) !important;
+  }
+  .border-\[\#D4AF37\] {
+    border-color: var(--accent-color) !important;
+  }
+  .bg-\[\#D4AF37\] {
+    background-color: var(--accent-color) !important;
+  }
+  .accent-\[\#D4AF37\] {
+    accent-color: var(--accent-color) !important;
   }
 
   /* Premium Scrollbars */
@@ -14,34 +161,35 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #0B0F19;
+    background: var(--bg-main);
   }
   ::-webkit-scrollbar-thumb {
-    background: #1E2640;
+    background: var(--border-color);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #D4AF37;
+    background: var(--accent-color);
   }
 }
 
 @layer utilities {
   .bg-glass {
-    background: rgba(30, 38, 64, 0.7);
+    background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(212, 175, 55, 0.1);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   }
   
   .bg-glass-active {
-    background: rgba(30, 38, 64, 0.85);
+    background: var(--bg-card);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(212, 175, 55, 0.35);
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+    border: 1px solid var(--accent-color);
+    box-shadow: 0 0 15px var(--accent-glow);
   }
 
   .text-glow-gold {
-    text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+    text-shadow: 0 0 10px var(--accent-glow);
   }
 
   .text-glow-red {
@@ -49,7 +197,7 @@
   }
 
   .border-glow-gold {
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.25);
+    box-shadow: 0 0 15px var(--accent-glow);
   }
 }
 
@@ -86,15 +234,121 @@
 
 @keyframes card-glow {
   0%, 100% {
-    border-color: rgba(212, 175, 55, 0.2);
+    border-color: var(--border-color);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
   50% {
-    border-color: rgba(212, 175, 55, 0.6);
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.25);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 20px var(--accent-glow);
   }
 }
 
 .animate-card-active {
   animation: card-glow 3s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   HIGH-SPECIFICITY LIGHT MODE OVERRIDES (AFTER LAYERS TO PREVENT FLICKER & DARK LEAKS)
+   ========================================================================== */
+
+[data-mode="light"] {
+  color-scheme: light;
+}
+
+[data-mode="light"] body {
+  background-color: var(--bg-main) !important;
+  color: var(--text-main) !important;
+}
+
+/* Background overrides for all hardcoded dark Tailwind classes */
+[data-mode="light"] .bg-\[\#0B0F19\],
+[data-mode="light"] .bg-\[\#0A0D14\],
+[data-mode="light"] .bg-\[\#0A0D15\],
+[data-mode="light"] .bg-\[\#0F1420\],
+[data-mode="light"] .bg-\[\#0B132B\],
+[data-mode="light"] .bg-\[\#061412\],
+[data-mode="light"] .bg-\[\#0F0A1C\],
+[data-mode="light"] .bg-\[\#12080A\],
+[data-mode="light"] .bg-slate-950,
+[data-mode="light"] .bg-slate-900,
+[data-mode="light"] .bg-slate-900\/50,
+[data-mode="light"] .bg-slate-800,
+[data-mode="light"] .bg-black,
+[data-mode="light"] .bg-black\/10,
+[data-mode="light"] .bg-black\/20,
+[data-mode="light"] .bg-black\/25,
+[data-mode="light"] .bg-black\/30,
+[data-mode="light"] .bg-black\/40,
+[data-mode="light"] .bg-black\/50,
+[data-mode="light"] .bg-black\/60,
+[data-mode="light"] .bg-black\/70,
+[data-mode="light"] .bg-black\/80,
+[data-mode="light"] .bg-\[\#0A0D15\]\/40,
+[data-mode="light"] .bg-\[\#0A0D15\]\/60,
+[data-mode="light"] .bg-\[\#0A0D15\]\/80 {
+  background-color: var(--bg-main) !important;
+}
+
+[data-mode="light"] .bg-\[\#1E2640\],
+[data-mode="light"] .bg-\[\#1E2640\]\/40,
+[data-mode="light"] .bg-\[\#1E2640\]\/55,
+[data-mode="light"] .bg-\[\#1E2640\]\/80,
+[data-mode="light"] .bg-glass,
+[data-mode="light"] .bg-glass-active {
+  background-color: var(--bg-card-solid) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Border overrides */
+[data-mode="light"] .border-\[\#1E2640\],
+[data-mode="light"] .border-\[\#1E2640\]\/50,
+[data-mode="light"] .border-\[\#1E2640\]\/55,
+[data-mode="light"] .border-slate-800,
+[data-mode="light"] .border-slate-700 {
+  border-color: var(--border-color) !important;
+}
+
+/* Text color overrides */
+[data-mode="light"] .text-slate-100,
+[data-mode="light"] .text-slate-200,
+[data-mode="light"] .text-white {
+  color: var(--text-main) !important;
+}
+
+[data-mode="light"] .text-slate-300,
+[data-mode="light"] .text-slate-400 {
+  color: var(--text-muted) !important;
+}
+
+[data-mode="light"] .text-slate-500 {
+  color: #64748B !important;
+}
+
+/* Accent color overrides */
+[data-mode="light"] .text-\[\#D4AF37\] {
+  color: var(--accent-color) !important;
+}
+
+[data-mode="light"] .border-\[\#D4AF37\] {
+  border-color: var(--accent-color) !important;
+}
+
+[data-mode="light"] .bg-\[\#D4AF37\] {
+  background-color: var(--accent-color) !important;
+  color: #FFFFFF !important;
+}
+
+/* Form input elements in Light Mode */
+[data-mode="light"] select,
+[data-mode="light"] input:not([type="checkbox"]):not([type="radio"]),
+[data-mode="light"] textarea {
+  background-color: #FFFFFF !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-mode="light"] input::placeholder,
+[data-mode="light"] textarea::placeholder {
+  color: #94A3B8 !important;
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   Clock, ChevronRight, HelpCircle, CheckCircle, XCircle
 } from 'lucide-react';
 import api from '../utils/api';
@@ -61,38 +61,32 @@ export const ApplicantsView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
+
       {/* Cabecera superior */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            MÓDULO 8: VALIDACIÓN DE ONBOARDING (AUDITORÍA)
-          </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Registro de Aspirantes</h2>
-          <p className="text-xs text-slate-400 mt-1">Inspección de credenciales y expedientes de acreditación legal de médicos y clínicas.</p>
         </div>
 
         {/* selectores de Estado de Solicitudes */}
         <div className="flex items-center space-x-2 bg-[#0F1420] border border-[#1E2640] p-1 rounded-xl self-start md:self-auto">
           <button
             onClick={() => { setStatusFilter('PENDING_APPROVAL'); setPage(1); }}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
-              statusFilter === 'PENDING_APPROVAL'
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${statusFilter === 'PENDING_APPROVAL'
                 ? 'bg-[#D4AF37] text-black shadow-md shadow-[#D4AF37]/10'
                 : 'text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             <Clock className="h-3.5 w-3.5" />
             <span>Pendientes</span>
           </button>
-          
+
           <button
             onClick={() => { setStatusFilter('APPROVED'); setPage(1); }}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
-              statusFilter === 'APPROVED'
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${statusFilter === 'APPROVED'
                 ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/10'
                 : 'text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             <CheckCircle className="h-3.5 w-3.5" />
             <span>Aprobados</span>
@@ -100,11 +94,10 @@ export const ApplicantsView: React.FC = () => {
 
           <button
             onClick={() => { setStatusFilter('REJECTED'); setPage(1); }}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
-              statusFilter === 'REJECTED'
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${statusFilter === 'REJECTED'
                 ? 'bg-rose-500 text-white shadow-md shadow-rose-500/10'
                 : 'text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             <XCircle className="h-3.5 w-3.5" />
             <span>Rechazados</span>
@@ -131,15 +124,14 @@ export const ApplicantsView: React.FC = () => {
               const personal = applicant.personal_data || {};
               const metadata = applicant.professional_metadata || {};
               const isDoctor = applicant.requested_role === 'DOCTOR';
-              
+
               return (
                 <div
                   key={applicant._id}
-                  className={`bg-glass p-6 rounded-3xl border flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] group relative ${
-                    statusFilter === 'PENDING_APPROVAL' 
+                  className={`bg-glass p-6 rounded-3xl border flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] group relative ${statusFilter === 'PENDING_APPROVAL'
                       ? 'border-[#1E2640] hover:border-[#D4AF37]/30 shadow-sm'
                       : 'border-[#1E2640]/50 bg-black/10'
-                  }`}
+                    }`}
                 >
                   <div>
                     {/* Tarjeta Cabecera */}
@@ -147,7 +139,7 @@ export const ApplicantsView: React.FC = () => {
                       <div className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${getStatusBadge(applicant.status)}`}>
                         {applicant.status}
                       </div>
-                      
+
                       <span className="text-[9px] font-mono text-slate-500 font-bold block bg-black/35 px-2 py-0.5 rounded border border-[#1E2640]">
                         {isDoctor ? 'MÉDICO' : 'CLIENTE'}
                       </span>
@@ -173,8 +165,8 @@ export const ApplicantsView: React.FC = () => {
                           {isDoctor ? 'Acreditación Clínica' : 'Razón Social'}
                         </span>
                         <strong className="text-slate-300 block truncate">
-                          {isDoctor 
-                            ? (metadata.institution_origin || 'Hospital / Clínica Origen') 
+                          {isDoctor
+                            ? (metadata.institution_origin || 'Hospital / Clínica Origen')
                             : (metadata.corporate_name || `${personal.first_name} Familia`)}
                         </strong>
                         {isDoctor && (
@@ -197,14 +189,13 @@ export const ApplicantsView: React.FC = () => {
                       <Clock className="h-3 w-3" />
                       <span>{new Date(applicant.submitted_at).toLocaleDateString('es-VE', { timeZone: 'America/Caracas' })}</span>
                     </span>
-                    
+
                     <button
                       onClick={() => navigate(`/applicants/${personal.email}`)}
-                      className={`px-3.5 py-1.5 font-bold text-xs rounded-xl border transition-all flex items-center space-x-1 ${
-                        applicant.status === 'PENDING_APPROVAL'
+                      className={`px-3.5 py-1.5 font-bold text-xs rounded-xl border transition-all flex items-center space-x-1 ${applicant.status === 'PENDING_APPROVAL'
                           ? 'bg-[#1E2640] text-[#D4AF37] border-[#D4AF37]/20 hover:bg-[#D4AF37] hover:text-black hover:border-[#D4AF37]'
                           : 'bg-black/20 text-slate-400 border-slate-700/30 hover:bg-[#1E2640]'
-                      }`}
+                        }`}
                     >
                       <span>{applicant.status === 'PENDING_APPROVAL' ? 'Revisar' : 'Detalles'}</span>
                       <ChevronRight className="h-3.5 w-3.5" />

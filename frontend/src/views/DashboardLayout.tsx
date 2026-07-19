@@ -172,10 +172,13 @@ export const DashboardLayout: React.FC = () => {
       : window.location.host;
     const wsUrl = `${wsProtocol}//${baseHost}/ws/global-alerts`;
 
-    let globalWs: WebSocket;
-    let keepAlive: any;
+    let globalWs: WebSocket | null = null;
+    let keepAlive: any = null;
     try {
       globalWs = new WebSocket(wsUrl);
+      globalWs.onerror = () => {
+        // Silenciar mensajes de error de desconexión prematura
+      };
       globalWs.onmessage = (event) => {
         if (event.data === 'pong') return;
         // Alerta cambiada, recargar inmediatamente
@@ -188,13 +191,22 @@ export const DashboardLayout: React.FC = () => {
         }
       }, 30000);
     } catch(err) {
-      console.warn("Global alerts WS failed", err);
+      // Fallback silencioso ante modo offline
     }
 
     return () => {
       clearInterval(interval);
       if (keepAlive) clearInterval(keepAlive);
-      if (globalWs) globalWs.close();
+      if (globalWs) {
+        if (globalWs.readyState === WebSocket.OPEN) {
+          globalWs.close();
+        } else if (globalWs.readyState === WebSocket.CONNECTING) {
+          globalWs.onopen = () => {
+            try { globalWs?.close(); } catch (e) {}
+          };
+          globalWs.onerror = () => {};
+        }
+      }
     };
   }, [user, navigate]);
 
@@ -221,14 +233,14 @@ export const DashboardLayout: React.FC = () => {
 
     const allLinks = [
       { path: '/dashboard', label: 'Dashboard Hub', icon: LayoutDashboard, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
-      { path: '/patients', label: 'Pacientes (M4)', icon: Users, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
-      { path: '/devices', label: 'Dispositivos IoT (M5)', icon: Smartphone, roles: ['ADMIN'] },
-      { path: '/doctors', label: 'Médicos (M6)', icon: Award, roles: ['ADMIN'] },
-      { path: '/clients', label: 'Clientes (M7)', icon: Building2, roles: ['ADMIN'] },
-      { path: '/applicants', label: 'Aspirantes (M8)', icon: UserCheck, roles: ['ADMIN'] },
-      { path: '/audits', label: 'Auditoría Forense (M12)', icon: ShieldCheck, roles: ['ADMIN'] },
-      { path: '/reports', label: 'Reportes Analíticos (M13)', icon: FileBarChart, roles: ['ADMIN', 'DOCTOR'] },
-      { path: '/sandbox', label: 'Laboratorio (M14)', icon: FlaskConical, roles: ['ADMIN'] },
+      { path: '/patients', label: 'Pacientes', icon: Users, roles: ['ADMIN', 'DOCTOR', 'CLIENT'] },
+      { path: '/devices', label: 'Dispositivos IoT', icon: Smartphone, roles: ['ADMIN'] },
+      { path: '/doctors', label: 'Médicos', icon: Award, roles: ['ADMIN'] },
+      { path: '/clients', label: 'Clientes', icon: Building2, roles: ['ADMIN'] },
+      { path: '/applicants', label: 'Aspirantes', icon: UserCheck, roles: ['ADMIN'] },
+      { path: '/audits', label: 'Auditoría Forense', icon: ShieldCheck, roles: ['ADMIN'] },
+      { path: '/reports', label: 'Reportes Analíticos', icon: FileBarChart, roles: ['ADMIN', 'DOCTOR'] },
+      { path: '/sandbox', label: 'Laboratorio', icon: FlaskConical, roles: ['ADMIN'] },
     ];
 
     return allLinks.filter(link => user.role && link.roles.includes(user.role));
@@ -422,15 +434,15 @@ export const DashboardLayout: React.FC = () => {
                 </span>
               )}
 
-              {/* Dropdown de Alertas Recientes */}
+              {/* Dropdown de Alertas Recientes (Responsive para Móvil) */}
               {isBellDropdownOpen && (
                 <>
                   <div 
-                    className="fixed inset-0 z-40" 
+                    className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs sm:bg-transparent sm:backdrop-blur-none" 
                     onClick={() => setIsBellDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 mt-3 w-80 bg-[#0F1420] border border-[#1E2640] rounded-2xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 flex flex-col overflow-hidden max-h-[420px]">
-                    <div className="px-4 py-3 bg-[#0A0D15]/60 border-b border-[#1E2640] flex items-center justify-between">
+                  <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:w-80 max-w-md mx-auto sm:mx-0 bg-[#0F1420] border border-[#1E2640] rounded-2xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 flex flex-col overflow-hidden max-h-[75vh] sm:max-h-[420px]">
+                    <div className="px-4 py-3 bg-[#0A0D15]/80 border-b border-[#1E2640] flex items-center justify-between flex-wrap gap-2">
                       <span className="font-extrabold text-xs uppercase tracking-wider text-[#D4AF37] font-mono">Panel de Alertas</span>
                       <div className="flex items-center space-x-2">
                         {criticalAlertCount > 0 && (
@@ -537,21 +549,21 @@ export const DashboardLayout: React.FC = () => {
                       className="w-full px-4 py-2.5 hover:bg-[#1E2640]/55 hover:text-[#D4AF37] text-left text-slate-300 font-semibold transition-all flex items-center space-x-2"
                     >
                       <UserCog className="h-4 w-4 text-[#D4AF37]" />
-                      <span>Mi Perfil (M10)</span>
+                      <span>Mi Perfil</span>
                     </button>
                     <button
                       onClick={() => { navigate('/settings'); setIsDropdownOpen(false); }}
                       className="w-full px-4 py-2.5 hover:bg-[#1E2640]/55 hover:text-[#D4AF37] text-left text-slate-300 font-semibold transition-all flex items-center space-x-2"
                     >
                       <Settings className="h-4 w-4 text-[#D4AF37]" />
-                      <span>Configuración (M11)</span>
+                      <span>Configuración</span>
                     </button>
                     <button
                       onClick={() => { navigate('/help'); setIsDropdownOpen(false); }}
                       className="w-full px-4 py-2.5 hover:bg-[#1E2640]/55 hover:text-[#D4AF37] text-left text-slate-300 font-semibold transition-all flex items-center space-x-2"
                     >
                       <HelpCircle className="h-4 w-4 text-[#D4AF37]" />
-                      <span>Centro de Ayuda (M9)</span>
+                      <span>Centro de Ayuda</span>
                     </button>
                     <div className="h-[1px] bg-[#1E2640] my-1" />
                     <button

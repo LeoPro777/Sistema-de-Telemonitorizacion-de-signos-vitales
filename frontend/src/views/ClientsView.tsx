@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, Grid, List as ListIcon, Building2, Home, 
+import {
+  Search, Grid, List as ListIcon, Building2, Home,
   ShieldAlert, Activity, ChevronRight
 } from 'lucide-react';
 import api from '../utils/api';
@@ -59,15 +59,11 @@ export const ClientsView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
+
       {/* Cabecera superior y barra de herramientas */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            MÓDULO 7: GESTIÓN DE CLIENTES Y FONDEO
-          </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Consola de Clientes</h2>
-          <p className="text-xs text-slate-400 mt-1">Supervisión contractual, estados de pago y monitoreo de clínicas o familiares en red.</p>
         </div>
 
         {/* Alternador de Vista (Grid / Tabla) */}
@@ -91,7 +87,7 @@ export const ClientsView: React.FC = () => {
 
       {/* Barra de Filtros */}
       <div className="bg-glass p-5 rounded-3xl border border-[#1E2640] flex flex-col md:flex-row gap-4 items-center justify-between">
-        
+
         {/* Buscador Semántico */}
         <div className="relative w-full md:w-96">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -147,24 +143,22 @@ export const ClientsView: React.FC = () => {
                   <button
                     key={client._id}
                     onClick={() => navigate(`/clients/${client._id}`)}
-                    className={`bg-glass p-6 rounded-3xl border text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden ${
-                      !isActive 
+                    className={`bg-glass p-6 rounded-3xl border text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] group outline-none relative overflow-hidden ${!isActive
                         ? 'border-[#1E2640]/40 opacity-50 bg-black/10'
-                        : hasAlert 
-                        ? 'border-[#FF1744]/40 bg-[#FF1744]/2 shadow-[0_0_15px_rgba(255,23,68,0.05)]' 
-                        : 'border-[#1E2640] hover:border-[#D4AF37]/30'
-                    }`}
+                        : hasAlert
+                          ? 'border-[#FF1744]/40 bg-[#FF1744]/2 shadow-[0_0_15px_rgba(255,23,68,0.05)]'
+                          : 'border-[#1E2640] hover:border-[#D4AF37]/30'
+                      }`}
                   >
                     <div>
                       {/* Cabecera Tarjeta: Icono de negocio */}
                       <div className="flex justify-between items-start">
-                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border transition-all ${
-                          !isActive
+                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border transition-all ${!isActive
                             ? 'bg-[#1E2640]/40 border-slate-700 text-slate-500'
                             : hasAlert
-                            ? 'bg-[#FF1744]/15 border-[#FF1744] text-[#FF1744] animate-pulse'
-                            : 'bg-[#1E2640] border-[#1E2640] text-[#D4AF37]'
-                        }`}>
+                              ? 'bg-[#FF1744]/15 border-[#FF1744] text-[#FF1744] animate-pulse'
+                              : 'bg-[#1E2640] border-[#1E2640] text-[#D4AF37]'
+                          }`}>
                           {isInstitution ? <Building2 className="h-5.5 w-5.5" /> : <Home className="h-5.5 w-5.5" />}
                         </div>
 
@@ -175,7 +169,7 @@ export const ClientsView: React.FC = () => {
                             <span>{cache.active_critical_alerts} S.O.S</span>
                           </span>
                         )}
-                        
+
                         {!hasAlert && (
                           <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-black/35 border border-[#1E2640] text-slate-500">
                             {isInstitution ? 'CLÍNICA' : 'FAMILIA'}
@@ -194,7 +188,7 @@ export const ClientsView: React.FC = () => {
 
                     {/* Métricas del Cliente */}
                     <div className="my-6 space-y-2 border-y border-[#1E2640]/50 py-4 font-mono">
-                      
+
                       {/* Barra 2: Pacientes vinculados */}
                       <div className="flex justify-between items-center text-[10px] pt-1">
                         <span className="text-slate-500 font-bold uppercase tracking-wider">Pacientes Fondeados</span>
@@ -239,22 +233,20 @@ export const ClientsView: React.FC = () => {
                       const isActive = client.is_active;
 
                       return (
-                        <tr 
-                          key={client._id} 
-                          className={`hover:bg-[#1E2640]/20 transition-all ${
-                            !isActive ? 'opacity-50 bg-black/10' : ''
-                          }`}
+                        <tr
+                          key={client._id}
+                          className={`hover:bg-[#1E2640]/20 transition-all ${!isActive ? 'opacity-50 bg-black/10' : ''
+                            }`}
                         >
                           {/* Col 1: Nombre */}
                           <td className="py-4 px-6">
                             <div className="flex items-center space-x-3">
-                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center border ${
-                                !isActive 
+                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center border ${!isActive
                                   ? 'bg-[#1E2640]/40 border-slate-700 text-slate-500'
-                                  : hasAlert 
-                                  ? 'bg-[#FF1744]/15 border-[#FF1744] text-[#FF1744]' 
-                                  : 'bg-[#1E2640] border-[#1E2640] text-[#D4AF37]'
-                              }`}>
+                                  : hasAlert
+                                    ? 'bg-[#FF1744]/15 border-[#FF1744] text-[#FF1744]'
+                                    : 'bg-[#1E2640] border-[#1E2640] text-[#D4AF37]'
+                                }`}>
                                 {client.client_type === 'CLINICA' ? <Building2 className="h-4.5 w-4.5" /> : <Home className="h-4.5 w-4.5" />}
                               </div>
                               <div>

@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Sistema de Telemonitorización de Signos Vitales</title>
+    <script>
+      (function() {
+        try {
+          var validThemes = ['aura_gold', 'emerald', 'cyber_cobalt', 'amethyst', 'crimson'];
+          var t = localStorage.getItem('aura_theme_id');
+          if (!t || validThemes.indexOf(t) === -1) {
+            t = 'aura_gold';
+            localStorage.setItem('aura_theme_id', 'aura_gold');
+          }
+          var m = localStorage.getItem('aura_theme_mode');
+          if (m !== 'light' && m !== 'dark') {
+            m = 'dark';
+            localStorage.setItem('aura_theme_mode', 'dark');
+          }
+          document.documentElement.setAttribute('data-theme', t);
+          document.documentElement.setAttribute('data-mode', m);
+          if (m === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.add('light');
+          }
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

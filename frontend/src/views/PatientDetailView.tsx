@@ -741,7 +741,6 @@ export const PatientDetailView: React.FC = () => {
                 <span className="h-2.5 w-2.5 bg-slate-600 rounded-full" title="Dispositivo IoT desconectado o sin señal" />
               )}
             </div>
-            <p className="text-xs text-slate-400 mt-1">Expediente Clínico &bull; <strong className="text-mono font-normal">{patient.medical_record_id}</strong> &bull; <span className={isDeviceActive ? "text-emerald-500 font-semibold" : "text-slate-500"}>{isDeviceActive ? "Transmitiendo" : "Sin Transmisión"}</span></p>
           </div>
         </div>
 

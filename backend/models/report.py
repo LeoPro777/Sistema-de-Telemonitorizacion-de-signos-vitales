@@ -22,6 +22,7 @@ class ReportCreate(BaseModel):
     start_date: str
     end_date: str
     patient_id: Optional[str] = None
+    interval_granularity: Optional[str] = "automatic"
 
 class ReportResponse(BaseModel):
     id: PyObjectId = Field(alias="_id")

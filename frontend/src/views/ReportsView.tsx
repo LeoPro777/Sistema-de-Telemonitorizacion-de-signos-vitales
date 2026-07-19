@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, User, ArrowRight, ArrowLeft, 
-  Printer, Download, TrendingUp, Activity, 
+import {
+  Calendar, User, ArrowRight, ArrowLeft,
+  Printer, Download, TrendingUp, Activity,
   Cpu, AlertCircle, Check
 } from 'lucide-react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, Legend, ResponsiveContainer, AreaChart, Area 
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import toast from 'react-hot-toast';
 import api, { API_BASE_URL } from '../utils/api';
@@ -17,29 +17,104 @@ interface Patient {
   rut: string;
   age?: number;
   condition: string;
+  created_at?: string;
 }
+
+interface GranularityOption {
+  value: string;
+  label: string;
+}
+
+const GRANULARITY_MAP: Record<string, GranularityOption[]> = {
+  DAILY: [
+    { value: '1min', label: 'Cada 1 Minuto' },
+    { value: '5min', label: 'Cada 5 Minutos' },
+    { value: '30min', label: 'Cada 30 Minutos' },
+    { value: '1hr', label: 'Cada 1 Hora' },
+  ],
+  WEEKLY: [
+    { value: '1hr', label: 'Cada 1 Hora' },
+    { value: '3hrs', label: 'Cada 3 Horas' },
+    { value: '6hrs', label: 'Cada 6 Horas' },
+    { value: '12hrs', label: 'Cada 12 Horas' },
+    { value: '1day', label: 'Cada 1 Día' },
+  ],
+  MONTHLY: [
+    { value: '1day', label: 'Cada 1 Día' },
+    { value: '3days', label: 'Cada 3 Días' },
+    { value: '7days', label: 'Cada 7 Días' },
+  ],
+  QUARTERLY: [
+    { value: '1day', label: 'Cada 1 Día' },
+    { value: '3days', label: 'Cada 3 Días' },
+    { value: '7days', label: 'Cada 7 Días' },
+    { value: '15days', label: 'Cada 15 Días' },
+  ],
+  CUSTOM: [
+    { value: 'automatic', label: 'Automático (Optimizado)' },
+    { value: '5min', label: 'Cada 5 Minutos' },
+    { value: '1hr', label: 'Cada 1 Hora' },
+    { value: '1day', label: 'Cada 1 Día' },
+  ]
+};
 
 export const ReportsView: React.FC = () => {
   // Estado del Wizard: 1 = Selector de Tipo, 2 = Parámetros, 3 = Previsualización & Exportación
   const [step, setStep] = useState<number>(1);
   const [reportType, setReportType] = useState<'CLINICAL' | 'MANAGEMENT'>('CLINICAL');
-  
-  // Parámetros
-  const [startDate, setStartDate] = useState<string>('2026-05-01');
-  const [endDate, setEndDate] = useState<string>('2026-05-30');
+
+  // Filtros Preset y Granularidad
+  const [timePreset, setTimePreset] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'CUSTOM'>('CUSTOM');
+  const [granularity, setGranularity] = useState<string>('automatic');
+
+  // Parámetros de Fecha: Fecha de hoy por defecto para el límite superior
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState<string>('2026-01-01');
+  const [endDate, setEndDate] = useState<string>(getTodayDate());
   const [patientQuery, setPatientQuery] = useState<string>('');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showPatientSuggestions, setShowPatientSuggestions] = useState<boolean>(false);
   const [patientsList, setPatientsList] = useState<Patient[]>([]);
-  
+
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [generatedReport, setGeneratedReport] = useState<any>(null);
+
+  // Cambiar rango de tiempo predeterminado y granularidad asociada
+  const handlePresetChange = (preset: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'CUSTOM') => {
+    setTimePreset(preset);
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    if (preset === 'DAILY') {
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      setStartDate(yesterday.toISOString().split('T')[0]);
+      setEndDate(todayStr);
+      setGranularity('5min');
+    } else if (preset === 'WEEKLY') {
+      const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      setStartDate(lastWeek.toISOString().split('T')[0]);
+      setEndDate(todayStr);
+      setGranularity('1hr');
+    } else if (preset === 'MONTHLY') {
+      const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      setStartDate(lastMonth.toISOString().split('T')[0]);
+      setEndDate(todayStr);
+      setGranularity('1day');
+    } else if (preset === 'QUARTERLY') {
+      const lastQuarter = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      setStartDate(lastQuarter.toISOString().split('T')[0]);
+      setEndDate(todayStr);
+      setGranularity('3days');
+    } else {
+      setGranularity('automatic');
+    }
+  };
 
   // Buscar pacientes en la DB real usando type-ahead
   useEffect(() => {
     if (reportType !== 'CLINICAL') return;
     if (selectedPatient && patientQuery === selectedPatient.name) return;
-    
+
     if (!patientQuery.trim()) {
       setPatientsList([]);
       return;
@@ -53,7 +128,8 @@ export const ReportsView: React.FC = () => {
           name: `${p.first_name} ${p.last_name}`,
           rut: p.national_id || 'N/A',
           age: p.age || 65,
-          condition: p.medical_history_summary?.notes || 'Monitoreo General'
+          condition: p.medical_history_summary?.notes || 'Monitoreo General',
+          created_at: p.created_at || p.created_date || p.admission_date
         }));
         setPatientsList(list);
       } catch (err) {
@@ -70,6 +146,18 @@ export const ReportsView: React.FC = () => {
     setSelectedPatient(p);
     setPatientQuery(p.name);
     setShowPatientSuggestions(false);
+
+    // Ajustar fecha inferior (inicio) al primer registro/creación del paciente si estamos en personalizado
+    if (p.created_at && timePreset === 'CUSTOM') {
+      try {
+        const firstRecordDate = new Date(p.created_at).toISOString().split('T')[0];
+        setStartDate(firstRecordDate);
+      } catch (e) {
+        // En caso de parse error mantiene la fecha previa
+      }
+      setEndDate(getTodayDate());
+    }
+
     toast.success(`Paciente seleccionado: ${p.name}`);
   };
 
@@ -78,14 +166,15 @@ export const ReportsView: React.FC = () => {
       toast.error('Debe seleccionar un paciente para el Reporte Clínico.');
       return;
     }
-    
+
     setIsProcessing(true);
     try {
       const res = await api.post('/reports', {
         report_type: reportType,
         start_date: new Date(startDate).toISOString(),
         end_date: new Date(endDate).toISOString(),
-        patient_id: reportType === 'CLINICAL' && selectedPatient ? selectedPatient.id : null
+        patient_id: reportType === 'CLINICAL' && selectedPatient ? selectedPatient.id : null,
+        interval_granularity: granularity
       });
       setGeneratedReport(res.data);
       setStep(3);
@@ -104,7 +193,7 @@ export const ReportsView: React.FC = () => {
     const token = localStorage.getItem('access_token');
     const reportId = generatedReport._id || generatedReport.id;
     const exportUrl = `${API_BASE_URL}/reports/${reportId}/export/pdf?token=${token}`;
-    
+
     toast.success('Descargando expediente PDF compilado por AURA Doc Generator...');
     setTimeout(() => {
       window.open(exportUrl, '_blank');
@@ -116,7 +205,7 @@ export const ReportsView: React.FC = () => {
     const token = localStorage.getItem('access_token');
     const reportId = generatedReport._id || generatedReport.id;
     const exportUrl = `${API_BASE_URL}/reports/${reportId}/export/csv?token=${token}`;
-    
+
     toast.success('Descargando expediente CSV compilado...');
     setTimeout(() => {
       window.open(exportUrl, '_blank');
@@ -125,17 +214,11 @@ export const ReportsView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-mono relative max-w-5xl mx-auto">
-      
+
       {/* Cabecera superior */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            MÓDULO 13: MOTOR DE REPORTES Y ANALÍTICA DE DATOS
-          </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Consola de Reportes</h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Asistente estructurado para la generación de reportes clínicos biométricos y auditoría de rendimiento de red.
-          </p>
         </div>
 
         {/* Indicador visual de Pasos (Wizard Indicators) */}
@@ -161,15 +244,14 @@ export const ReportsView: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-            
+
             {/* Opción 1: CLINICAL */}
-            <div 
+            <div
               onClick={() => setReportType('CLINICAL')}
-              className={`p-6 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between space-y-4 hover:border-[#D4AF37]/60 group relative overflow-hidden ${
-                reportType === 'CLINICAL' 
-                  ? 'bg-[#1E2640]/40 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/5' 
+              className={`p-6 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between space-y-4 hover:border-[#D4AF37]/60 group relative overflow-hidden ${reportType === 'CLINICAL'
+                  ? 'bg-[#1E2640]/40 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/5'
                   : 'bg-black/20 border-[#1E2640]'
-              }`}
+                }`}
             >
               <div className="absolute top-0 right-0 w-16 h-16 bg-[#D4AF37]/5 rounded-full blur-xl pointer-events-none group-hover:bg-[#D4AF37]/10 transition-all" />
               <div className="space-y-2">
@@ -188,13 +270,12 @@ export const ReportsView: React.FC = () => {
             </div>
 
             {/* Opción 2: MANAGEMENT */}
-            <div 
+            <div
               onClick={() => setReportType('MANAGEMENT')}
-              className={`p-6 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between space-y-4 hover:border-[#D4AF37]/60 group relative overflow-hidden ${
-                reportType === 'MANAGEMENT' 
-                  ? 'bg-[#1E2640]/40 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/5' 
+              className={`p-6 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between space-y-4 hover:border-[#D4AF37]/60 group relative overflow-hidden ${reportType === 'MANAGEMENT'
+                  ? 'bg-[#1E2640]/40 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/5'
                   : 'bg-black/20 border-[#1E2640]'
-              }`}
+                }`}
             >
               <div className="absolute top-0 right-0 w-16 h-16 bg-[#D4AF37]/5 rounded-full blur-xl pointer-events-none group-hover:bg-[#D4AF37]/10 transition-all" />
               <div className="space-y-2">
@@ -231,7 +312,7 @@ export const ReportsView: React.FC = () => {
       {/* ======================================================== */}
       {step === 2 && (
         <div className="bg-glass rounded-3xl border border-[#1E2640] p-8 space-y-6 max-w-2xl mx-auto relative">
-          
+
           <div className="text-center space-y-2">
             <h3 className="text-base font-extrabold text-slate-200 uppercase">
               Configurar Filtros del Reporte ({reportType})
@@ -241,8 +322,58 @@ export const ReportsView: React.FC = () => {
             </p>
           </div>
 
-          <div className="space-y-4 pt-2">
-            
+          <div className="space-y-5 pt-2">
+
+            {/* Selector de Rango Predefinido */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-[#D4AF37] font-extrabold uppercase tracking-widest block">
+                Filtro de Rango Temporal
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-black/40 p-1.5 rounded-2xl border border-[#1E2640]">
+                {[
+                  { id: 'DAILY', label: 'Diario' },
+                  { id: 'WEEKLY', label: 'Semanal' },
+                  { id: 'MONTHLY', label: 'Mensual' },
+                  { id: 'QUARTERLY', label: 'Trimestral' },
+                  { id: 'CUSTOM', label: 'Rango Lib.' }
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handlePresetChange(p.id as any)}
+                    className={`py-2 px-2 text-[10px] font-bold rounded-xl transition-all uppercase tracking-wider ${
+                      timePreset === p.id
+                        ? 'bg-[#D4AF37] text-black shadow-md shadow-[#D4AF37]/20 font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E2640]/50'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Granularidad de Promedios por Intervalo */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">
+                Frecuencia de Promedios (Bucket de Agrupamiento)
+              </label>
+              <div className="relative">
+                <TrendingUp className="absolute left-3.5 top-3 h-4 w-4 text-[#D4AF37]" />
+                <select
+                  value={granularity}
+                  onChange={(e) => setGranularity(e.target.value)}
+                  className="w-full pl-10 pr-8 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl text-xs focus:border-[#D4AF37] outline-none text-slate-200 cursor-pointer font-medium"
+                >
+                  {(GRANULARITY_MAP[timePreset] || GRANULARITY_MAP['CUSTOM']).map((opt) => (
+                    <option key={opt.value} value={opt.value} className="bg-[#0F1420] text-slate-200">
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Fechas de Muestreo */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -252,7 +383,10 @@ export const ReportsView: React.FC = () => {
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setTimePreset('CUSTOM');
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl text-xs focus:border-[#D4AF37] outline-none text-slate-300"
                   />
                 </div>
@@ -265,7 +399,10 @@ export const ReportsView: React.FC = () => {
                   <input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setTimePreset('CUSTOM');
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#0B0F19] border border-[#1E2640] rounded-xl text-xs focus:border-[#D4AF37] outline-none text-slate-300"
                   />
                 </div>
@@ -290,11 +427,10 @@ export const ReportsView: React.FC = () => {
                     }}
                     onFocus={() => setShowPatientSuggestions(true)}
                     placeholder="Escriba nombre o Cédula del paciente..."
-                    className={`w-full pl-10 pr-10 py-2.5 bg-[#0B0F19] border rounded-xl text-xs outline-none transition-all ${
-                      selectedPatient 
-                        ? 'border-emerald-500 focus:border-emerald-500 text-emerald-400' 
+                    className={`w-full pl-10 pr-10 py-2.5 bg-[#0B0F19] border rounded-xl text-xs outline-none transition-all ${selectedPatient
+                        ? 'border-emerald-500 focus:border-emerald-500 text-emerald-400'
                         : 'border-[#1E2640] focus:border-[#D4AF37] text-slate-300'
-                    }`}
+                      }`}
                   />
                   {selectedPatient && (
                     <div className="absolute right-3.5 top-2.5 p-1 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20">
@@ -399,7 +535,7 @@ export const ReportsView: React.FC = () => {
       {/* ======================================================== */}
       {step === 3 && generatedReport && (
         <div className="space-y-6">
-          
+
           {/* Controles Flotantes Superiores */}
           <div className="bg-[#0F1420] border border-[#1E2640] p-4 rounded-3xl flex flex-wrap gap-4 items-center justify-between">
             <button
@@ -431,7 +567,7 @@ export const ReportsView: React.FC = () => {
 
           {/* LIENZO INTERACTIVO: HOJA FÍSICA ESTRUCTURADA DE PREVISUALIZACIÓN */}
           <div className="bg-[#0A0E17] border-2 border-[#1E2640] shadow-2xl rounded-3xl overflow-hidden p-6 md:p-10 relative">
-            
+
             {/* Sello de agua premium AURA */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#D4AF37]/2 text-[10vw] font-black uppercase pointer-events-none select-none tracking-widest leading-none">
               AURA
@@ -470,7 +606,7 @@ export const ReportsView: React.FC = () => {
 
             {/* Información Técnica y Metadatos de la Muestra */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-black/25 border border-[#1E2640]/55 p-6 rounded-2xl mb-8 text-xs leading-relaxed">
-              
+
               <div className="space-y-1 font-sans">
                 <span className="text-[9px] text-slate-500 font-bold uppercase font-mono block">Especificación de Muestra</span>
                 {reportType === 'CLINICAL' ? (
@@ -499,7 +635,7 @@ export const ReportsView: React.FC = () => {
 
             {/* SECCIÓN ANALÍTICA: GRÁFICOS Y MÉTRICAS */}
             <div className="space-y-8">
-              
+
               {reportType === 'CLINICAL' ? (
                 <>
                   {/* Grid de Métricas Clínicas Avanzadas */}
@@ -541,7 +677,7 @@ export const ReportsView: React.FC = () => {
                       <TrendingUp className="h-4 w-4" />
                       <span>Gráfica de Tendencia Biométrica Compilada</span>
                     </h3>
-                    
+
                     {/* Gráfico Recharts con Estilo Premium */}
                     <div className="h-80 w-full bg-black/45 border border-[#1E2640] rounded-2xl p-4">
                       <ResponsiveContainer width="100%" height="100%">
@@ -549,32 +685,32 @@ export const ReportsView: React.FC = () => {
                           <CartesianGrid strokeDasharray="3 3" stroke="#1E2640" />
                           <XAxis dataKey="timestamp" stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
                           <YAxis stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
-                          <Tooltip 
+                          <Tooltip
                             contentStyle={{ backgroundColor: '#0F1420', border: '1px solid #1E2640', borderRadius: '12px' }}
                             labelStyle={{ fontSize: 10, color: '#D4AF37', fontWeight: 'bold' }}
                             itemStyle={{ fontSize: 10, color: '#E2E8F0' }}
                           />
                           <Legend wrapperStyle={{ fontSize: 9, paddingTop: 10 }} />
-                          <Line 
-                            name="Pulso (BPM)" 
-                            type="monotone" 
-                            dataKey="bpm" 
-                            stroke="#FF1744" 
+                          <Line
+                            name="Pulso (BPM)"
+                            type="monotone"
+                            dataKey="bpm"
+                            stroke="#FF1744"
                             strokeWidth={2.5}
-                            activeDot={{ r: 8 }} 
+                            activeDot={{ r: 8 }}
                           />
-                          <Line 
-                            name="SpO2 (%)" 
-                            type="monotone" 
-                            dataKey="spo2" 
-                            stroke="#38BDF8" 
+                          <Line
+                            name="SpO2 (%)"
+                            type="monotone"
+                            dataKey="spo2"
+                            stroke="#38BDF8"
                             strokeWidth={2.5}
                           />
-                          <Line 
-                            name="Temperatura (°C)" 
-                            type="monotone" 
-                            dataKey="temp" 
-                            stroke="#10B981" 
+                          <Line
+                            name="Temperatura (°C)"
+                            type="monotone"
+                            dataKey="temp"
+                            stroke="#10B981"
                             strokeWidth={2.5}
                           />
                         </LineChart>
@@ -629,35 +765,35 @@ export const ReportsView: React.FC = () => {
                 <>
                   {/* Métricas e Infraestructura con Recharts AreaChart */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    
+
                     <div className="space-y-3">
                       <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest">
                         Volumen de Paquetes Procesados (Por semana)
                       </h3>
-                      
+
                       <div className="h-64 w-full bg-black/45 border border-[#1E2640] rounded-2xl p-4">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={generatedReport.preview_snapshot.chart_data || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorPackets" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
+                                <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#1E2640" />
                             <XAxis dataKey="date" stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
                             <YAxis stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
-                            <Tooltip 
+                            <Tooltip
                               contentStyle={{ backgroundColor: '#0F1420', border: '1px solid #1E2640', borderRadius: '12px' }}
                               itemStyle={{ fontSize: 10, color: '#E2E8F0' }}
                             />
-                            <Area 
-                              name="Paquetes" 
-                              type="monotone" 
-                              dataKey="packets" 
-                              stroke="#D4AF37" 
-                              fillOpacity={1} 
-                              fill="url(#colorPackets)" 
+                            <Area
+                              name="Paquetes"
+                              type="monotone"
+                              dataKey="packets"
+                              stroke="#D4AF37"
+                              fillOpacity={1}
+                              fill="url(#colorPackets)"
                               strokeWidth={2.5}
                             />
                           </AreaChart>
@@ -669,29 +805,29 @@ export const ReportsView: React.FC = () => {
                       <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest">
                         Estadísticas de Alarmas Generadas
                       </h3>
-                      
+
                       <div className="h-64 w-full bg-black/45 border border-[#1E2640] rounded-2xl p-4">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={generatedReport.preview_snapshot.chart_data || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#1E2640" />
                             <XAxis dataKey="date" stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
                             <YAxis stroke="#64748B" style={{ fontSize: 9, fontFamily: 'monospace' }} />
-                            <Tooltip 
+                            <Tooltip
                               contentStyle={{ backgroundColor: '#0F1420', border: '1px solid #1E2640', borderRadius: '12px' }}
                               itemStyle={{ fontSize: 10, color: '#E2E8F0' }}
                             />
-                            <Line 
-                              name="Alarmas" 
-                              type="monotone" 
-                              dataKey="alerts" 
-                              stroke="#FF1744" 
+                            <Line
+                              name="Alarmas"
+                              type="monotone"
+                              dataKey="alerts"
+                              stroke="#FF1744"
                               strokeWidth={2.5}
                             />
-                            <Line 
-                              name="Latencia (ms)" 
-                              type="monotone" 
-                              dataKey="latency" 
-                              stroke="#38BDF8" 
+                            <Line
+                              name="Latencia (ms)"
+                              type="monotone"
+                              dataKey="latency"
+                              stroke="#38BDF8"
                               strokeWidth={2.5}
                             />
                           </LineChart>
@@ -703,7 +839,7 @@ export const ReportsView: React.FC = () => {
 
                   {/* KPI Grid para Gestión */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
-                    
+
                     <div className="bg-[#0F1420] border border-[#1E2640] p-4 rounded-2xl text-center space-y-1">
                       <span className="text-[8px] text-slate-500 block uppercase font-bold">Total de Equipos</span>
                       <strong className="text-base text-[#D4AF37] block font-mono">
@@ -740,17 +876,12 @@ export const ReportsView: React.FC = () => {
 
             {/* Timbre y Firma Digital al final de la Hoja Física */}
             <div className="border-t border-[#1E2640]/80 mt-10 pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] text-slate-500 font-sans gap-6">
-              
+
               <div className="text-center md:text-left space-y-0.5">
                 <p className="uppercase font-bold text-[#D4AF37]/80 font-mono">Firma Digital Registrada</p>
                 <p className="font-mono text-[9px] text-slate-600 select-all">
                   SHA-256: {generatedReport._id || generatedReport.id}
                 </p>
-              </div>
-
-              <div className="text-center md:text-right space-y-0.5">
-                <p className="font-semibold text-slate-300 uppercase">Dr. Pedro Ramírez L.</p>
-                <p className="text-[9px] text-slate-600">Director de Asistencia Médica, AURA</p>
               </div>
 
             </div>

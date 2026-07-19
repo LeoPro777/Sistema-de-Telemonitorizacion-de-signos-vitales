@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Bell, Globe, Lock, Smartphone, Volume2, ShieldAlert
+import {
+  Bell, Globe, Lock, Smartphone, Volume2, ShieldAlert, Sun, Moon, Palette
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { useAuthStore } from '../store/authStore';
 import { useTour } from '../hooks/useTour';
+import { useThemeStore, THEME_OPTIONS, ThemeId } from '../store/themeStore';
 
 export const SettingsView: React.FC = () => {
   const { user } = useAuthStore();
@@ -40,18 +41,18 @@ export const SettingsView: React.FC = () => {
 
   useTour('settings_tour', tourSteps);
 
-  // Configuración General
+  // Configuración General & Temas
+  const { theme, mode, setTheme, setMode } = useThemeStore();
   const [language, setLanguage] = useState<string>('ES');
-  const [theme, setTheme] = useState<string>('premium_dark');
   const [timeFormat, setTimeFormat] = useState<string>('24h');
   const [emailEnabled, setEmailEnabled] = useState<boolean>(true);
   const [pushEnabled, setPushEnabled] = useState<boolean>(true);
-  
+
   // Clinical toggles
   const [heartAlerts, setHeartAlerts] = useState<boolean>(true);
   const [spo2Alerts, setSpo2Alerts] = useState<boolean>(true);
   const [tempAlerts, setTempAlerts] = useState<boolean>(true);
-  
+
   // Umbrales Clínicos Globales
   const [minBpm, setMinBpm] = useState<number>(() => {
     const v = localStorage.getItem('aura_global_min_bpm');
@@ -73,7 +74,7 @@ export const SettingsView: React.FC = () => {
     const v = localStorage.getItem('aura_global_max_temp');
     return v ? parseFloat(v) : 38.0;
   });
-  
+
   // Nuevas configuraciones de IoT e Instrumentación
   const [iotFrequency, setIotFrequency] = useState<number>(() => {
     const v = localStorage.getItem('aura_iot_frequency');
@@ -100,8 +101,9 @@ export const SettingsView: React.FC = () => {
   const fetchConfigurations = async () => {
     try {
       const response = await api.get('/dashboard/config');
-      if (response.data.theme_preference) {
-        setTheme(response.data.theme_preference);
+      const pref = response.data.theme_preference;
+      if (pref && THEME_OPTIONS.some((t) => t.id === pref)) {
+        setTheme(pref as ThemeId);
       }
       if (response.data.time_format) {
         setTimeFormat(response.data.time_format);
@@ -178,18 +180,14 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-mono relative max-w-4xl mx-auto pb-10">
-      
+
       {/* Cabecera superior */}
       <div>
-        <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-          MÓDULO 11: PREFERENCIAS Y PARÁMETROS GLOBALES
-        </span>
         <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Panel de Configuración</h2>
-        <p className="text-xs text-slate-400 mt-1">Configure idiomas, interfaces de red e instrumentación clínica de AURA.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
+
         {/* PANEL 1: PREFERENCIAS GENERALES */}
         <div id="general-preferences-panel" className="bg-glass rounded-3xl border border-[#1E2640] p-6 space-y-5">
           <h3 className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest border-b border-[#1E2640] pb-3 flex items-center space-x-2">
@@ -210,16 +208,66 @@ export const SettingsView: React.FC = () => {
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] text-slate-500 font-bold uppercase block">Tema Estético SPA</label>
-              <select
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                className="w-full p-3 bg-[#0B0F19] border border-[#1E2640] rounded-xl outline-none text-slate-200 cursor-pointer"
-              >
-                <option value="premium_dark">AURA Premium Dark (Predeterminado)</option>
-                <option value="light">Classic Light (Contraste Clínico)</option>
-              </select>
+            {/* Modo de Iluminación */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-slate-500 font-bold uppercase block">Modo de Iluminación</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMode('dark')}
+                  className={`p-2.5 rounded-xl border flex items-center justify-center space-x-2 text-xs font-bold transition-all ${
+                    mode === 'dark'
+                      ? 'bg-[#1E2640] border-[#D4AF37] text-white shadow-md'
+                      : 'bg-[#0B0F19] border-[#1E2640] text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Moon className="h-4 w-4 text-indigo-400" />
+                  <span>Modo Oscuro</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('light')}
+                  className={`p-2.5 rounded-xl border flex items-center justify-center space-x-2 text-xs font-bold transition-all ${
+                    mode === 'light'
+                      ? 'bg-slate-200 border-[#D4AF37] text-slate-900 shadow-md'
+                      : 'bg-[#0B0F19] border-[#1E2640] text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Sun className="h-4 w-4 text-amber-500" />
+                  <span>Modo Claro</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Selector de Temas Estéticos (5) */}
+            <div className="space-y-2 pt-1">
+              <label className="text-[10px] text-slate-500 font-bold uppercase block flex items-center space-x-1">
+                <Palette className="h-3 w-3 text-[#D4AF37]" />
+                <span>Temas Estéticos Personalizados (5)</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {THEME_OPTIONS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTheme(t.id as ThemeId)}
+                    className={`p-3 rounded-xl border text-left flex items-start justify-between transition-all ${
+                      theme === t.id
+                        ? 'bg-[#1E2640] border-[#D4AF37] text-white shadow-md'
+                        : 'bg-[#0B0F19] border-[#1E2640] text-slate-300 hover:border-slate-600'
+                    }`}
+                  >
+                    <div>
+                      <p className="text-xs font-bold">{t.name}</p>
+                      <p className="text-[9px] text-slate-400 leading-tight mt-0.5">{t.description}</p>
+                    </div>
+                    <span
+                      className="h-4 w-4 rounded-full border border-white/20 shrink-0 ml-2 shadow-sm mt-0.5"
+                      style={{ backgroundColor: t.accentColor }}
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -253,21 +301,21 @@ export const SettingsView: React.FC = () => {
           </h3>
 
           <div className="space-y-4 text-xs font-mono">
-            
+
             {/* Canales Digitales */}
             <div className="space-y-3">
               <span className="text-[9px] text-slate-500 font-bold uppercase block">Canales Digitales</span>
-              
+
               <div className="flex items-center justify-between p-3 bg-black/25 border border-[#1E2640] rounded-2xl">
                 <div>
                   <strong className="text-slate-300 block text-xs">Correo Electrónico Fijo</strong>
                   <span className="text-[9px] text-slate-500 block">Reportes y alertas críticas directas</span>
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={emailEnabled} 
+                <input
+                  type="checkbox"
+                  checked={emailEnabled}
                   onChange={(e) => setEmailEnabled(e.target.checked)}
-                  className="w-4 h-4 accent-[#D4AF37] cursor-pointer" 
+                  className="w-4 h-4 accent-[#D4AF37] cursor-pointer"
                 />
               </div>
 
@@ -276,11 +324,11 @@ export const SettingsView: React.FC = () => {
                   <strong className="text-slate-300 block text-xs">Notificaciones Push Móviles</strong>
                   <span className="text-[9px] text-slate-500 block">Vibración instantánea en pasarelas</span>
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={pushEnabled} 
+                <input
+                  type="checkbox"
+                  checked={pushEnabled}
                   onChange={(e) => setPushEnabled(e.target.checked)}
-                  className="w-4 h-4 accent-[#D4AF37] cursor-pointer" 
+                  className="w-4 h-4 accent-[#D4AF37] cursor-pointer"
                 />
               </div>
             </div>
@@ -292,33 +340,30 @@ export const SettingsView: React.FC = () => {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setHeartAlerts(!heartAlerts)}
-                  className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all ${
-                    heartAlerts 
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                  className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all ${heartAlerts
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                       : 'bg-black/10 text-slate-500 border-[#1E2640]'
-                  }`}
+                    }`}
                 >
                   Frecuencia Cardíaca (BPM)
                 </button>
 
                 <button
                   onClick={() => setSpo2Alerts(!spo2Alerts)}
-                  className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all ${
-                    spo2Alerts 
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                  className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all ${spo2Alerts
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                       : 'bg-black/10 text-slate-500 border-[#1E2640]'
-                  }`}
+                    }`}
                 >
                   Saturación SpO2
                 </button>
 
                 <button
                   onClick={() => setTempAlerts(!tempAlerts)}
-                  className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all ${
-                    tempAlerts 
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                  className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all ${tempAlerts
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                       : 'bg-black/10 text-slate-500 border-[#1E2640]'
-                  }`}
+                    }`}
                 >
                   Temperatura (°C)
                 </button>
@@ -332,7 +377,7 @@ export const SettingsView: React.FC = () => {
 
       {/* PANEL 3: CONFIGURACIÓN AVANZADA (DIRECTIVAS DE CLINICA - ADMINISTRATIVO) */}
       <div id="global-thresholds-panel" className="bg-glass rounded-3xl border border-[#1E2640] p-6 space-y-6 relative overflow-hidden">
-        
+
         {/* Adornos estéticos */}
         <div className="absolute top-0 right-0 w-24 h-24 bg-[#FF1744]/5 rounded-full blur-2xl pointer-events-none" />
 
@@ -354,7 +399,7 @@ export const SettingsView: React.FC = () => {
 
         {/* Inputs de Alta Densidad Decimal - SIEMPRE DESBLOQUEADOS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-          
+
           {/* BPM */}
           <div className="bg-black/25 p-4 rounded-2xl border border-[#1E2640] space-y-3">
             <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">1. Frecuencia Cardíaca (BPM)</span>
@@ -455,7 +500,7 @@ export const SettingsView: React.FC = () => {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-          
+
           <div className="space-y-4">
             <div className="space-y-1">
               <label className="text-[10px] text-slate-500 font-bold uppercase block">Frecuencia de Muestreo ESP32</label>
@@ -530,7 +575,7 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* CONFIRMATION MODAL CON MENSAJE */}
-      <ConfirmationModal 
+      <ConfirmationModal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         onConfirm={handleConfirmGlobalThresholds}

@@ -167,11 +167,7 @@ export const ProfileEditView: React.FC = () => {
       {/* Cabecera superior */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            CONSOLA DE MODIFICACIÓN DE EXPEDIENTE
-          </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Editar Mi Perfil</h2>
-          <p className="text-xs text-slate-400 mt-1">Altere sus datos de contacto con validación en caliente y sincronización de red.</p>
         </div>
 
         <div className="flex items-center space-x-2">

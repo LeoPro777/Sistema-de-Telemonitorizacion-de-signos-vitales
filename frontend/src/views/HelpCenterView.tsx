@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, BookOpen, HelpCircle, MessageSquare, AlertCircle, 
+import {
+  Search, BookOpen, HelpCircle, MessageSquare, AlertCircle,
   Send, ChevronRight, X, Clock
 } from 'lucide-react';
 import api from '../utils/api';
@@ -179,7 +179,7 @@ export const HelpCenterView: React.FC = () => {
       startTour(true);
       return;
     }
-    
+
     if (tourId === 'patient_detail_tour') {
       try {
         // Obtener el primer paciente disponible para iniciar el tour de detalle
@@ -196,14 +196,14 @@ export const HelpCenterView: React.FC = () => {
       }
       return;
     }
-    
+
     const tourPaths: Record<string, string> = {
       dashboard_tour: '/dashboard',
       patients_tour: '/patients',
       devices_tour: '/devices',
       settings_tour: '/settings'
     };
-    
+
     const path = tourPaths[tourId];
     if (path) {
       localStorage.setItem('aura_force_tour', tourId);
@@ -224,15 +224,11 @@ export const HelpCenterView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-mono relative">
-      
+
       {/* Cabecera superior */}
       <div id="help-header" className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold uppercase block mb-1">
-            MÓDULO 9: CENTRO DE AYUDA Y SOPORTE TÉCNICO
-          </span>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Centro de Ayuda</h2>
-          <p className="text-xs text-slate-400 mt-1">Busque guías, resuelva dudas técnicas o contacte con gobernanza de AURA.</p>
         </div>
 
         <button
@@ -271,7 +267,7 @@ export const HelpCenterView: React.FC = () => {
 
           {/* Caja Type-Ahead de sugerencias instantáneas */}
           {showSuggestions && suggestions.length > 0 && (
-            <div 
+            <div
               ref={suggestionsRef}
               className="absolute left-0 right-0 mt-2 bg-[#0F1420] border border-[#1E2640] rounded-2xl shadow-2xl overflow-hidden z-30 divide-y divide-[#1E2640]/55"
             >
@@ -304,10 +300,10 @@ export const HelpCenterView: React.FC = () => {
 
       {/* Contenedor Principal en Rejilla */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Columna Izquierda: Artículos (2/3 de la pantalla en desktop) */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Píldoras de Categorías y Selector de Formato FAQ/Guías */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1E2640]/55 pb-4">
             {/* Píldoras horizontales de categoría */}
@@ -316,11 +312,10 @@ export const HelpCenterView: React.FC = () => {
                 <button
                   key={cat}
                   onClick={() => { setActiveCategory(cat); }}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${
-                    activeCategory === cat
+                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${activeCategory === cat
                       ? 'bg-[#1E2640] text-[#D4AF37] border-[#D4AF37]/30 shadow-md'
                       : 'bg-black/10 text-slate-400 border-[#1E2640] hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   {cat}
                 </button>
@@ -331,23 +326,21 @@ export const HelpCenterView: React.FC = () => {
             <div id="help-tabs" className="flex bg-[#0F1420] border border-[#1E2640] p-1 rounded-xl self-start md:self-auto">
               <button
                 onClick={() => setActiveTab('FAQ')}
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
-                  activeTab === 'FAQ'
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${activeTab === 'FAQ'
                     ? 'bg-[#D4AF37] text-black shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <HelpCircle className="h-3.5 w-3.5" />
                 <span>FAQs</span>
               </button>
-              
+
               <button
                 onClick={() => setActiveTab('GUIDE')}
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
-                  activeTab === 'GUIDE'
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${activeTab === 'GUIDE'
                     ? 'bg-[#D4AF37] text-black shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <BookOpen className="h-3.5 w-3.5" />
                 <span>Guías Clínicas</span>
@@ -380,7 +373,7 @@ export const HelpCenterView: React.FC = () => {
                       <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-black/45 border border-[#1E2640] text-[#D4AF37] uppercase">
                         {art.category}
                       </span>
-                      
+
                       <span className="text-[9px] text-slate-500 font-mono font-bold flex items-center space-x-1">
                         <Clock className="h-3 w-3" />
                         <span>{art.format_type === 'FAQ' ? 'Pregunta Frecuente' : 'Guía de Lectura'}</span>
@@ -390,7 +383,7 @@ export const HelpCenterView: React.FC = () => {
                     <h4 className="text-base font-extrabold text-slate-200 group-hover:text-white transition-colors leading-tight">
                       {art.title}
                     </h4>
-                    
+
                     <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed font-sans">
                       {art.content.replace(/[#*`_]/g, '').slice(0, 150)}...
                     </p>
@@ -427,13 +420,12 @@ export const HelpCenterView: React.FC = () => {
               { id: 'settings_tour', name: 'Preferencias y Ajustes', allowed: true },
               { id: 'help_tour', name: 'Centro de Ayuda AURA', allowed: true }
             ].map((tour) => (
-              <div 
-                key={tour.id} 
-                className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
-                  tour.allowed 
-                    ? 'bg-black/20 border-[#1E2640] hover:border-[#D4AF37]/20' 
+              <div
+                key={tour.id}
+                className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${tour.allowed
+                    ? 'bg-black/20 border-[#1E2640] hover:border-[#D4AF37]/20'
                     : 'bg-black/10 border-slate-900/50 opacity-40'
-                }`}
+                  }`}
               >
                 <div className="pr-2 truncate">
                   <span className="text-xs text-slate-300 font-bold block truncate">{tour.name}</span>
@@ -478,7 +470,7 @@ export const HelpCenterView: React.FC = () => {
       {isTicketModalOpen && (
         <div className="fixed inset-0 bg-[#0B0F19]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-[#0F1420] border border-[#1E2640] rounded-3xl p-6 w-full max-w-lg text-xs flex flex-col justify-between shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-            
+
             <button
               onClick={() => setIsTicketModalOpen(false)}
               className="absolute right-4 top-4 p-1.5 bg-[#1E2640] text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all"
