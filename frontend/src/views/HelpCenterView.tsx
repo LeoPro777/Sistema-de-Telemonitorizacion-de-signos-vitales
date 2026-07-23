@@ -419,48 +419,71 @@ export const HelpCenterView: React.FC = () => {
               { id: 'devices_tour', name: 'Inventario de Hardware IoT', allowed: user?.role === 'ADMIN' },
               { id: 'settings_tour', name: 'Preferencias y Ajustes', allowed: true },
               { id: 'help_tour', name: 'Centro de Ayuda AURA', allowed: true }
-            ].map((tour) => (
-              <div
-                key={tour.id}
-                className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${tour.allowed
-                    ? 'bg-black/20 border-[#1E2640] hover:border-[#D4AF37]/20'
-                    : 'bg-black/10 border-slate-900/50 opacity-40'
+            ].map((tour) => {
+              const isCompleted = user?.completed_tours?.includes(tour.id);
+              return (
+                <div
+                  key={tour.id}
+                  className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                    tour.allowed
+                      ? isCompleted
+                        ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40'
+                        : 'bg-black/20 border-[#1E2640] hover:border-[#D4AF37]/20'
+                      : 'bg-black/10 border-slate-900/50 opacity-40'
                   }`}
-              >
-                <div className="pr-2 truncate">
-                  <span className="text-xs text-slate-300 font-bold block truncate">{tour.name}</span>
-                  <span className="text-[8px] text-slate-500 font-mono">ID: {tour.id}</span>
+                >
+                  <div className="pr-2 truncate">
+                    <div className="flex items-center space-x-2 truncate">
+                      <span className="text-xs text-slate-200 font-bold truncate">{tour.name}</span>
+                      {isCompleted && (
+                        <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono">
+                          ✓ Vista
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[8px] text-slate-500 font-mono">ID: {tour.id}</span>
+                  </div>
+                  {tour.allowed ? (
+                    <button
+                      onClick={() => handleLaunchTour(tour.id)}
+                      className={`px-3 py-1.5 text-[9px] font-bold rounded-lg border transition-all uppercase whitespace-nowrap ${
+                        isCompleted
+                          ? 'bg-[#1E2640] hover:bg-emerald-500 hover:text-black text-emerald-400 border-emerald-500/30'
+                          : 'bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] border-[#D4AF37]/20'
+                      }`}
+                    >
+                      {isCompleted ? 'Ver de nuevo' : 'Iniciar'}
+                    </button>
+                  ) : (
+                    <span className="text-[8px] text-slate-600 font-bold uppercase border border-slate-800 rounded px-1.5 py-0.5">
+                      Bloqueado
+                    </span>
+                  )}
                 </div>
-                {tour.allowed ? (
-                  <button
-                    onClick={() => handleLaunchTour(tour.id)}
-                    className="px-3 py-1.5 bg-[#1E2640] hover:bg-[#D4AF37] hover:text-black text-[9px] text-[#D4AF37] font-bold rounded-lg border border-[#D4AF37]/20 transition-all uppercase whitespace-nowrap"
-                  >
-                    Iniciar
-                  </button>
-                ) : (
-                  <span className="text-[8px] text-slate-600 font-bold uppercase border border-slate-800 rounded px-1.5 py-0.5">
-                    Bloqueado
-                  </span>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <div className="border-t border-[#1E2640]/55 pt-4 mt-2">
-            <span className="text-[9px] text-[#FF1744] font-bold uppercase tracking-wider block mb-1">
-              ADMINISTRACIÓN DE TOURS
-            </span>
-            <p className="text-[9px] text-slate-500 leading-normal mb-3">
-              ¿Deseas volver a reproducir todos los tours interactivos al ingresar a cada vista por primera vez? Restablece tu historial de preferencias.
+          <div className="border-t border-[#1E2640]/55 pt-4 mt-2 space-y-2">
+            <p className="text-[9px] text-slate-400 leading-normal">
+              💡 <span className="font-bold text-slate-300">Tip:</span> Puedes presionar <span className="text-emerald-400 font-bold">"Ver de nuevo"</span> en cualquiera de tus guías para repasarla individualmente en cualquier momento.
             </p>
-            <button
-              onClick={handleResetTours}
-              id="reset-tours-btn"
-              className="w-full py-2.5 bg-[#FF1744]/10 hover:bg-[#FF1744] text-[#FF1744] hover:text-black text-[10px] font-extrabold rounded-xl border border-[#FF1744]/30 transition-all uppercase tracking-wider text-center"
-            >
-              Restablecer Guías Completadas
-            </button>
+
+            <div className="pt-2">
+              <span className="text-[9px] text-[#FF1744] font-bold uppercase tracking-wider block mb-1">
+                ADMINISTRACIÓN DE TOURS
+              </span>
+              <p className="text-[9px] text-slate-500 leading-normal mb-3">
+                ¿Deseas volver a reproducir automáticamente todas las guías al ingresar por primera vez a cada sección?
+              </p>
+              <button
+                onClick={handleResetTours}
+                id="reset-tours-btn"
+                className="w-full py-2.5 bg-[#FF1744]/10 hover:bg-[#FF1744] text-[#FF1744] hover:text-black text-[10px] font-extrabold rounded-xl border border-[#FF1744]/30 transition-all uppercase tracking-wider text-center"
+              >
+                Restablecer Autoinicio General
+              </button>
+            </div>
           </div>
         </div>
 

@@ -692,8 +692,235 @@ async def run_seed():
     await db.dashboard_kpi_cache.insert_many(kpi_caches)
     print("KPIs precacheados inicializados.")
 
-    # Seeding de artículos de ayuda
+    # Seeding de artículos de ayuda (10 FAQs y 10 Guías Clínicas/Técnicas)
     help_articles = [
+        # --- 10 PREGUNTAS FRECUENTES (FAQs) ---
+        {
+            "_id": ObjectId(),
+            "title": "¿Cómo interpretar las Alertas Clínicas?",
+            "slug": "como-interpretar-alertas-clinicas",
+            "format_type": "FAQ",
+            "category": "Clínica",
+            "content": """# Interpretación de Alertas Clínicas
+
+El gateway biométrico AURA evalúa constantemente la telemetría enviada por el ESP32 para diagnosticar anomalías críticas.
+
+## Rangos Biométricos Estándar
+1. **Frecuencia Cardíaca (BPM)**: Rango óptimo entre `60` y `100` pulsaciones por minuto.
+2. **Saturación de Oxígeno (SpO2 %)**: Crítico si desciende de `92%`.
+3. **Temperatura (°C)**: Alarma si excede de `38.0°C` (Fiebre) o desciende de `35.0°C` (Hipotermia).
+
+Si experimenta una alerta roja, el personal clínico de turno será notificado instantáneamente. Conserve la calma y espere instrucciones.
+""",
+            "media_urls": [],
+            "search_keywords": ["alertas", "pulsaciones", "bpm", "spo2", "fiebre"],
+            "feedback_counters": {"useful_votes": 42, "not_useful_votes": 3},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "¿Qué hacer si un dispositivo ESP32 pierde la conexión Wi-Fi?",
+            "slug": "que-hacer-desconexion-wifi-esp32",
+            "format_type": "FAQ",
+            "category": "Hardware",
+            "content": """# Desconexión de Red en Dispositivos ESP32
+
+Si el indicador LED de su sensor parpadea en color amarillo o rojo intermitente, el dispositivo se encuentra desconectado del enlace inalámbrico.
+
+## Pasos para la reconexión:
+1. Verifique que el router Wi-Fi de la residencia o clínica esté encendido.
+2. Mantenga presionado el botón lateral de reset durante 3 segundos.
+3. Si la falla persiste, ingrese al menú **Inventario de Hardware** y reactive el punto de acceso temporal `AURA-CONFIG`.
+""",
+            "media_urls": [],
+            "search_keywords": ["desconexion", "wifi", "esp32", "fallo", "offline"],
+            "feedback_counters": {"useful_votes": 31, "not_useful_votes": 2},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Métodos de Pago y Ciclos del Fondeo Familiar",
+            "slug": "metodos-pago-fondeo-familiar",
+            "format_type": "FAQ",
+            "category": "Fondeo",
+            "content": """# Métodos de Pago del Fondeo Familiar
+
+Información relacionada con la facturación y suscripciones del sistema AURA para familiares e instituciones.
+
+## Ciclos de Cobro
+Los cobros se realizan de forma anticipada los **primeros 5 días hábiles** de cada mes.
+
+## Medios de Pago Aceptados
+* **Transferencia Bancaria Directa**
+* **Pago Móvil / Transferencia Internacional**
+
+Si presenta alertas contractuales en la consola de clientes, su servicio de monitoreo no se suspenderá inmediatamente, sino que otorgará una prórroga de 10 días antes de suspender temporalmente las credenciales del paciente.
+""",
+            "media_urls": [],
+            "search_keywords": ["pago", "factura", "dinero", "contrato", "fondeo"],
+            "feedback_counters": {"useful_votes": 12, "not_useful_votes": 0},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "¿Cómo se calculan los promedios biométricos en los Reportes Analíticos?",
+            "slug": "calculo-promedios-biometricos-reportes",
+            "format_type": "FAQ",
+            "category": "Clínica",
+            "content": """# Cálculo Estricto de Promedios Biométricos
+
+En el motor de reportes analíticos de AURA, la integridad de los datos fisiológicos se calcula bajo estándares estrictos:
+
+## Regla de Exclusión de Vacíos:
+* Los días u horas sin datos no se rellenan con ceros ni valores simulados.
+* El cálculo de promedios pondera únicamente lecturas biométricas reales registradas por los sensores.
+* De esta manera se evitan distorsiones en las métricas de variabilidad cardíaca y oxigenación.
+""",
+            "media_urls": [],
+            "search_keywords": ["promedios", "calculo", "reportes", "estadisticas", "biometria"],
+            "feedback_counters": {"useful_votes": 28, "not_useful_votes": 1},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "¿Qué es y cómo funciona la Autenticación de Dos Factores (2FA)?",
+            "slug": "funcionamiento-autenticacion-dos-factores-2fa",
+            "format_type": "FAQ",
+            "category": "Todos",
+            "content": """# Autenticación de Dos Factores (2FA)
+
+La seguridad de los datos de salud de los pacientes está resguardada por estándares de cifrado médico.
+
+## ¿Cómo activar o usar el 2FA?
+1. Ingrese a la vista de **Preferencias y Ajustes**.
+2. Active el interruptor de **Seguridad 2FA**.
+3. Al iniciar sesión desde un nuevo dispositivo, se solicitará un código OTP generado por su aplicación de autenticación (Google Authenticator / Authy).
+""",
+            "media_urls": [],
+            "search_keywords": ["2fa", "seguridad", "otp", "contraseña", "autenticacion"],
+            "feedback_counters": {"useful_votes": 35, "not_useful_votes": 0},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "¿Cómo asignar o reasignar un dispositivo ESP32 a un paciente?",
+            "slug": "asignacion-reasignacion-dispositivo-esp32",
+            "format_type": "FAQ",
+            "category": "Hardware",
+            "content": """# Asignación y Reasignación de Hardware IoT
+
+Los administradores pueden vincular un chip ESP32 activo a cualquier paciente en tratamiento.
+
+## Pasos para la asignación:
+1. Vaya a la vista de **Inventario de Hardware IoT**.
+2. Seleccione el dispositivo por su número de serie o MAC Address.
+3. Haga clic en **Vincular Paciente** y elija al destinatario. La telemetría comenzará a transmitirse inmediatamente al expediente seleccionado.
+""",
+            "media_urls": [],
+            "search_keywords": ["asignar", "dispositivo", "mac", "paciente", "hardware"],
+            "feedback_counters": {"useful_votes": 19, "not_useful_votes": 1},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "¿Quién puede aprobar o rechazar solicitudes de nuevos usuarios en AURA?",
+            "slug": "quien-aprueba-solicitudes-nuevos-usuarios",
+            "format_type": "FAQ",
+            "category": "Todos",
+            "content": """# Aprobación de Cuentas y Solicitudes de Onboarding
+
+Para salvaguardar la red médica, el acceso a la plataforma AURA está sujeto a verificación de credenciales.
+
+## Roles autorizados:
+* **Administradores Generales**: Pueden auditar licencias médicas, cédulas de identidad y autorizar o rechazar solicitudes de registro en la vista de **Solicitudes PENDIENTES**.
+* **Doctores y Clientes**: Recibirán una notificación por correo tan pronto su cuenta haya sido aprobada por el área administrativa.
+""",
+            "media_urls": [],
+            "search_keywords": ["aprobacion", "onboarding", "admin", "permisos", "pendiente"],
+            "feedback_counters": {"useful_votes": 15, "not_useful_votes": 0},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "¿Qué significan las prioridades de los Tickets de Soporte Técnico?",
+            "slug": "prioridades-tickets-soporte-tecnico",
+            "format_type": "FAQ",
+            "category": "Todos",
+            "content": """# Categorías de Prioridad en Tickets de Soporte
+
+Al enviar una solicitud de ayuda desde el Centro de Soporte, puede clasificar la severidad de su incidente:
+
+## Niveles de Atención:
+1. **BAJA**: Consultas generales sobre uso del sistema o sugerencias de interfaz.
+2. **MEDIA**: Inconvenientes menores con gráficos o configuraciones secundarias.
+3. **ALTA**: Fallos de conectividad en el hardware de monitoreo o interrupción de alertas biométricas.
+""",
+            "media_urls": [],
+            "search_keywords": ["ticket", "soporte", "prioridad", "ayuda", "incidente"],
+            "feedback_counters": {"useful_votes": 22, "not_useful_votes": 1},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "¿Cómo exportar el historial de signos vitales a formato PDF o CSV?",
+            "slug": "como-exportar-historial-signos-vitales-pdf-csv",
+            "format_type": "FAQ",
+            "category": "Clínica",
+            "content": """# Exportación de Datos Fisiológicos
+
+Puede generar informes en formato de grado clínico en cualquier momento:
+
+## Métodos de descarga:
+1. **Desde el Expediente Fisiológico**: Utilice los botones de descarga rápida en la esquina superior del paciente.
+2. **Desde el Módulo de Reportes Analíticos**: Seleccione un rango de fechas (Diario, Semanal, Mensual, Trimestral) y exporte la Hoja Clínica Completa con sello digital SHA-256.
+""",
+            "media_urls": [],
+            "search_keywords": ["exportar", "pdf", "csv", "descargar", "reporte"],
+            "feedback_counters": {"useful_votes": 38, "not_useful_votes": 2},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "¿Cómo cambiar el tema visual (Aura Gold, Esmeralda, etc.) o activar el Modo Claro/Oscuro?",
+            "slug": "cambiar-tema-visual-modo-claro-oscuro",
+            "format_type": "FAQ",
+            "category": "Todos",
+            "content": """# Personalización de Temas y Contraste Visual
+
+El sistema AURA cuenta con 5 temas exclusivos y compatibilidad completa con Modo Claro y Oscuro.
+
+## Pasos para modificar su tema:
+1. Diríjase a **Preferencias y Ajustes** en el menú de usuario o perfil.
+2. Elija entre las paletas *Aura Gold*, *Emerald Health*, *Cyber Cobalt*, *Amethyst Royal* o *Crimson Alert*.
+3. Alterné libremente el interruptor entre **Modo Claro** y **Modo Oscuro**. Su selección se mantendrá guardada de forma permanente.
+""",
+            "media_urls": [],
+            "search_keywords": ["tema", "modo claro", "modo oscuro", "aura gold", "colores"],
+            "feedback_counters": {"useful_votes": 50, "not_useful_votes": 1},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+
+        # --- 10 GUÍAS CLÍNICAS Y TÉCNICAS (GUIDES) ---
         {
             "_id": ObjectId(),
             "title": "Configuración del Hardware ESP32 AURA",
@@ -724,57 +951,214 @@ Una vez configurado, el dispositivo enviará datos biométricos directamente. Pa
         },
         {
             "_id": ObjectId(),
-            "title": "¿Cómo interpretar las Alertas Clínicas?",
-            "slug": "como-interpretar-alertas-clinicas",
-            "format_type": "FAQ",
-            "category": "Clínica",
-            "content": """# Interpretación de Alertas Clínicas
+            "title": "Guía de Calibración de Sensores MAX30102 y DS18B20",
+            "slug": "guia-calibracion-sensores-max30102-ds18b20",
+            "format_type": "GUIDE",
+            "category": "Hardware",
+            "content": """# Calibración de Sensores Ópticos y Térmicos
 
-El gateway biométrico AURA evalúa constantemente la telemetría enviada por el ESP32 para diagnosticar anomalías críticas.
+Asegure la máxima exactitud clínica en la adquisición de telemetría biométrica continua.
 
-## Rangos Biométricos Estándar
-1. **Frecuencia Cardíaca (BPM)**: Rango óptimo entre `60` y `100` pulsaciones por minuto.
-2. **Saturación de Oxígeno (SpO2 %)**: Crítico si desciende de `92%`.
-3. **Temperatura (°C)**: Alarma si excede de `38.0°C` (Fiebre) o desciende de `35.0°C` (Hipotermia).
+## 1. Sensor PPG MAX30102 (Frecuencia Cardíaca y SpO2)
+* Ajuste la correa de fijación táctil sin oprimir el tejido capilar.
+* Verifique que la lente emisora infrarroja esté limpia y libre de humedad.
 
-Si experimenta una alerta roja, el personal clínico de turno será notificado instantáneamente. Conserve la calma y espere instrucciones.
+## 2. Sensor Térmico Digital DS18B20
+* Posicione la sonda en la zona axilar o subclavicular según el protocolo institucional.
+* Tiempo mínimo de estabilización térmica: 45 segundos.
 """,
             "media_urls": [],
-            "search_keywords": ["alertas", "pulsaciones", "bpm", "spo2", "fiebre"],
-            "feedback_counters": {"useful_votes": 42, "not_useful_votes": 3},
+            "search_keywords": ["calibracion", "max30102", "ds18b20", "sensores", "pulso"],
+            "feedback_counters": {"useful_votes": 18, "not_useful_votes": 0},
             "is_published": True,
             "created_at": now,
             "updated_at": now
         },
         {
             "_id": ObjectId(),
-            "title": "Métodos de Pago y Ciclos del Fondeo Familiar",
-            "slug": "metodos-pago-fondeo-familiar",
-            "format_type": "FAQ",
-            "category": "Fondeo",
-            "content": """# Métodos de Pago del Fondeo Familiar
+            "title": "Protocolo de Manejo Fisiológico ante Taquicardia e Hipoxia Severa",
+            "slug": "protocolo-manejo-fisiologico-taquicardia-hipoxia",
+            "format_type": "GUIDE",
+            "category": "Clínica",
+            "content": """# Protocolo Clínico para Anomalías Combinadas
 
-Información relacionada con la facturación y suscripciones del sistema AURA para familiares individuales.
+Guía de actuación médica inmediata ante alertas de estado **CRÍTICO MULTIPLE** en pacientes monioteados.
 
-## Ciclos de Cobro
-Los cobros se realizan de forma anticipada los **primeros 5 días hábiles** de cada mes.
+## 1. Evaluación de Síntomas
+* Verifique si la saturación desciende por debajo de 90% en simultáneo con ritmo cardíaco > 120 BPM.
+* Descarte falsos positivos por movimiento brusco comprobando la forma de onda en tiempo real.
 
-## Medios de Pago Aceptados
-* **Transferencia Bancaria Directa**
-* **Pago Móvil / Transferencia Bancaria**
-
-Si presenta alertas contractuales en la consola de clientes, su servicio de monitoreo no se suspenderá inmediatamente, sino que otorgará una prórroga de 10 días antes de suspender temporalmente las credenciales del paciente.
+## 2. Acciones Inmediatas
+* Posicione al paciente en postura semi-Fowler.
+* Inicie oxigenoterapia según indicación del médico tratante y notifique al sistema.
 """,
             "media_urls": [],
-            "search_keywords": ["pago", "factura", "dinero", "contrato", "fondeo"],
-            "feedback_counters": {"useful_votes": 12, "not_useful_votes": 0},
+            "search_keywords": ["protocolo", "taquicardia", "hipoxia", "critico", "emergencia"],
+            "feedback_counters": {"useful_votes": 45, "not_useful_votes": 1},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Manual de Configuración de Umbrales Clínicos Personalizados",
+            "slug": "manual-configuracion-umbrales-clinicos-personalizados",
+            "format_type": "GUIDE",
+            "category": "Clínica",
+            "content": """# Ajuste Fisiológico de Umbrales Clínicos
+
+Cada paciente cuenta con necesidades médicas particulares. AURA permite ajustar los márgenes de alarma por expediente.
+
+## Pasos para personalizar umbrales:
+1. Ingrese a la vista de **Expediente del Paciente**.
+2. Presione el botón **Editar Umbrales Clínicos**.
+3. Modifique los valores de Frecuencia Cardíaca Mín/Máx, SpO2 Crítico y Temperatura.
+4. Guarde los cambios. Los algoritmos de evaluación de alertas se actualizarán en tiempo real.
+""",
+            "media_urls": [],
+            "search_keywords": ["umbrales", "limites", "personalizar", "configuracion", "clinica"],
+            "feedback_counters": {"useful_votes": 29, "not_useful_votes": 2},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Guía para la Generación y Análisis de Reportes Trimestrales",
+            "slug": "guia-generacion-analisis-reportes-trimestrales",
+            "format_type": "GUIDE",
+            "category": "Clínica",
+            "content": """# Consolidación de Reportes Fisiológicos Trimestrales
+
+Instrucciones para generar auditorías completas de salud poblacional e individual.
+
+## 1. Selección de Parámetros
+* Elija el filtro temporal **Trimestral** en el módulo de reportes.
+* Defina la granularidad de agrupamiento (ej. promedios cada 1 día o cada 7 días).
+
+## 2. Interpretación de Tendencias
+* Analice los gráficos de dispersión de variabilidad para identificar episodios recurrentes de taquicardia o apneas nocturnas.
+""",
+            "media_urls": [],
+            "search_keywords": ["trimestral", "reportes", "analisis", "tendencias", "salud"],
+            "feedback_counters": {"useful_votes": 21, "not_useful_votes": 0},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Procedimiento de Aprobación de Médicos y Clientes en Onboarding",
+            "slug": "procedimiento-aprobacion-medicos-clientes-onboarding",
+            "format_type": "GUIDE",
+            "category": "Todos",
+            "content": """# Protocolo Administrativo de Auditoría de Cuentas
+
+Manual operativo para la verificación de profesionales de la salud e instituciones clínicas en AURA.
+
+## Requisitos de Verificación:
+* **Licencia Médica Vigente**: Debe cotejarse contra el registro nacional oficial.
+* **Documento de Identificación**: Cédula o pasaporte digitalizado sin enmiendas.
+* **Firma de Términos HIPAA / GDPR**: Cumplimiento de protección de datos personales.
+""",
+            "media_urls": [],
+            "search_keywords": ["onboarding", "licencia", "aprobacion", "medicos", "auditoria"],
+            "feedback_counters": {"useful_votes": 16, "not_useful_votes": 0},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Guía de Monitoreo Multi-Paciente para Médicos y Centros Clínicos",
+            "slug": "guia-monitoreo-multi-paciente-medicos-centros",
+            "format_type": "GUIDE",
+            "category": "Clínica",
+            "content": """# Gestión de Paneles de Monitoreo Simultáneo
+
+Optimice la atención de múltiples pacientes en salas de hospitalización o telemedicina domiciliaria.
+
+## Funciones del Panel General:
+* Tarjetas dinámicas con actualización en vivo por WebSockets.
+* Codificación por colores de riesgo: Verde (Estable), Amarillo (Precaución), Rojo (Crítico).
+* Silenciador de alarma sonora global con temporizador de reactivación automática.
+""",
+            "media_urls": [],
+            "search_keywords": ["multi-paciente", "panel", "telemedicina", "monitor", "clinico"],
+            "feedback_counters": {"useful_votes": 33, "not_useful_votes": 1},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Manual de Diagnóstico de Red y Reducción de Latencia IoT",
+            "slug": "manual-diagnostico-red-reduccion-latencia-iot",
+            "format_type": "GUIDE",
+            "category": "Hardware",
+            "content": """# Optimización de Conectividad IoT y Enlace MQTT/WS
+
+Guía técnica para ingenieros de soporte y personal de infraestructura médica.
+
+## Indicadores Frecuentes:
+* **Latencia Recomendada**: Inferior a `150 ms`.
+* **Pérdida de Paquetes**: Máximo tolerable `1.5%`.
+
+Si detecta latencias superiores, configure canales de radio Wi-Fi no saturados (Canales 1, 6 u 11 en 2.4 GHz).
+""",
+            "media_urls": [],
+            "search_keywords": ["latencia", "red", "iot", "ping", "mqtt", "hardware"],
+            "feedback_counters": {"useful_votes": 14, "not_useful_votes": 0},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Guía de Seguridad, Privacidad de Datos y Auditoría Forense",
+            "slug": "guia-seguridad-privacidad-datos-auditoria-forense",
+            "format_type": "GUIDE",
+            "category": "Todos",
+            "content": """# Estándares de Seguridad y Registros de Auditoría
+
+Protección inmutable de la información médica conforme a normativas de ciberseguridad.
+
+## Pilares del Sistema AURA:
+1. **Cifrado en Transito y Reposo**: Enlaces SSL/TLS y hashes SHA-256.
+2. **Logs de Auditoría Inmutables**: Registro detallado de cada consulta, descarga de reportes o modificación de umbrales.
+3. **Control de Acceso Basado en Roles (RBAC)**: Aislamiento estricto de datos entre instituciones.
+""",
+            "media_urls": [],
+            "search_keywords": ["seguridad", "cifrado", "auditoria", "privacidad", "sha256"],
+            "feedback_counters": {"useful_votes": 26, "not_useful_votes": 0},
+            "is_published": True,
+            "created_at": now,
+            "updated_at": now
+        },
+        {
+            "_id": ObjectId(),
+            "title": "Instructivo de Gestión de Fondeo y Suscripciones Institucionales",
+            "slug": "instructivo-gestion-fondeo-suscripciones-institucionales",
+            "format_type": "GUIDE",
+            "category": "Fondeo",
+            "content": """# Administración de Contratos y Fondeo Institucional
+
+Guía para centros clínicos, aseguradoras y representantes familiares.
+
+## Administración de Licencias:
+* Monitoree el estado de vigencia del contrato desde la consola del cliente.
+* Descargue recibos digitales de pago y mantenga al día las asignaciones de dispositivos por paciente.
+""",
+            "media_urls": [],
+            "search_keywords": ["fondeo", "suscripcion", "contrato", "facturacion", "licencias"],
+            "feedback_counters": {"useful_votes": 17, "not_useful_votes": 1},
             "is_published": True,
             "created_at": now,
             "updated_at": now
         }
     ]
     await db.help_articles.insert_many(help_articles)
-    print("Artículos de soporte e instructivos precargados.")
+    print("Artículos de soporte e instructivos precargados (10 FAQs y 10 Guías).")
 
     # Seeding de perfiles de usuario
     user_profiles = [

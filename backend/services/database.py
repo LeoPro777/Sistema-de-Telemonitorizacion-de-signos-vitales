@@ -35,6 +35,13 @@ class DatabaseService:
             logger.info("Índice compuesto en audit_logs inicializado.")
         except Exception as e:
             logger.warning(f"Fallo al crear índice compuesto en audit_logs: {e}")
+
+        # Crear índice en la colección vital_signs_history para consultas de alta velocidad
+        try:
+            await self.raw_db.vital_signs_history.create_index([("patient_id", 1), ("timestamp", -1)])
+            logger.info("Índice en vital_signs_history inicializado.")
+        except Exception as e:
+            logger.warning(f"Fallo al crear índice en vital_signs_history: {e}")
         
         # Redis
         logger.info(f"Conectando a Redis en: {settings.REDIS_URL}")
